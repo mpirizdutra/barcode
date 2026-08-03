@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Prueba Emulador USB - POS</title>
+  <!-- Tailwind CSS (Solo para diseño rápido y visualización) -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Alpine.js (Cargado en modo defer) -->
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+</head>
+
+<body class="bg-slate-900 text-slate-100 min-h-screen p-8" x-data="posPrueba">
+
+  <div class="max-w-2xl mx-auto space-y-6">
+
+    <!-- Header -->
+    <header class="border-b border-slate-700 pb-4">
+      <h1 class="text-2xl font-bold text-emerald-400">⚡ Test de Escáner USB (Sin Foco Requreido)</h1>
+      <p class="text-slate-400 text-sm mt-1">Escaneá desde el celular en cualquier momento. No hace falta hacer clic en
+        la caja de búsqueda.</p>
+    </header>
+
+    <!-- Simulación de interfaz POS -->
+    <div class="grid grid-cols-2 gap-4">
+
+      <!-- Campo de búsqueda normal (opcional) -->
+      <div class="col-span-2 bg-slate-800 p-4 rounded-lg border border-slate-700">
+        <label class="block text-xs uppercase tracking-wider text-slate-400 mb-2">Buscador Manual (Para probar
+          foco):</label>
+        <input type="text" x-model="busquedaManual" placeholder="Podés hacer clic acá o en cualquier lado..."
+          class="w-full bg-slate-900 border border-slate-600 rounded px-3 py-2 text-slate-200 focus:outline-none focus:border-emerald-500">
+      </div>
+
+      <!-- Estado del último escaneo -->
+      <div class="bg-slate-800 p-4 rounded-lg border border-slate-700">
+        <span class="text-xs uppercase tracking-wider text-slate-400">Último Código Leído</span>
+        <div class="text-xl font-mono font-bold text-amber-400 mt-1" x-text="ultimoCodigo || '---'"></div>
+      </div>
+
+      <!-- Estado del sistema -->
+      <div class="bg-slate-800 p-4 rounded-lg border border-slate-700">
+        <span class="text-xs uppercase tracking-wider text-slate-400">Estado</span>
+        <div class="flex items-center gap-2 mt-2">
+          <span class="w-3 h-3 rounded-full" :class="cargando ? 'bg-amber-500 animate-ping' : 'bg-emerald-500'"></span>
+          <span class="text-sm font-medium" x-text="cargando ? 'Buscando producto...' : 'Esperando lectura'"></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Resultados de la simulación de Búsqueda -->
+    <div class="bg-slate-800 rounded-lg border border-slate-700 p-6">
+      <h2 class="text-lg font-semibold text-slate-200 mb-4">🛒 Producto Detectado</h2>
+
+      <template x-if="productoEncontrado">
+        <div
+          class="bg-slate-900 border border-emerald-500/30 p-4 rounded-lg flex justify-between items-center animate-fade-in">
+          <div>
+            <div class="text-emerald-400 font-bold text-lg" x-text="productoEncontrado.nombre"></div>
+            <div class="text-slate-400 text-xs font-mono" x-text="'SKU: ' + productoEncontrado.codigo"></div>
+          </div>
+          <div class="text-2xl font-bold text-white" x-text="'$' + productoEncontrado.precio"></div>
+        </div>
+      </template>
+
+      <template x-if="!productoEncontrado && !cargando">
+        <div class="text-center py-8 text-slate-500 italic">
+          Acercá el escáner para registrar una lectura...
+        </div>
+      </template>
+    </div>
+
+  </div>
+
+  <!-- Script de lógica separado -->
+  <script src="app-test.js"></script>
+</body>
+
+</html>

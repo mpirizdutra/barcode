@@ -1,0 +1,12 @@
+node_modules/
+.env
+*.log
+.DS_Store
+dist/
+coverage/
+.vscode/
+.idea/
+public/css/output.css
+
+cypress/
+cypress.config.js
