@@ -1,813 +1,962 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="es">
-
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>App Lector & Inventario</title>
 
+    <link rel="icon" href="img/icon/ic_launcher_mdpi.png" type="image/x-icon" />
+
     <!--link rel="stylesheet" href="css/tailwind.min.css"-->
-    <link rel="stylesheet" href="css/output.css">
+    <link rel="stylesheet" href="css/output.css" />
     <script defer src="js/alpine.min.js"></script>
     <script src="js/lucide.min.js"></script>
 
     <style>
-        /* Animación del láser del escáner */
-        .scanner-laser {
-            animation: scan 2s infinite ease-in-out;
+      /* Animación del láser del escáner */
+      .scanner-laser {
+        animation: scan 2s infinite ease-in-out;
+      }
+
+      @keyframes scan {
+        0%,
+        100% {
+          top: 10%;
         }
 
-        @keyframes scan {
-
-            0%,
-            100% {
-                top: 10%;
-            }
-
-            50% {
-                top: 90%;
-            }
+        50% {
+          top: 90%;
         }
+      }
 
-        /* [x-cloak] {
+      /* [x-cloak] {
             display: none !important;
         }*/
 
-        /* Estilo para el desvanecimiento de carga */
-        #page-loader {
-            /* Agregamos pointer-events y organizamos la transición */
-            transition: opacity 0.5s ease-out, visibility 0.5s ease-out;
-            pointer-events: auto;
-        }
+      /* Estilo para el desvanecimiento de carga */
+      #page-loader {
+        /* Agregamos pointer-events y organizamos la transición */
+        transition:
+          opacity 0.5s ease-out,
+          visibility 0.5s ease-out;
+        pointer-events: auto;
+      }
 
-        .loader-hidden {
-            opacity: 0 !important;
-            visibility: hidden !important;
-            /* Evita que el loader invisible bloquee toques en la pantalla */
-            pointer-events: none !important;
-        }
+      .loader-hidden {
+        opacity: 0 !important;
+        visibility: hidden !important;
+        /* Evita que el loader invisible bloquee toques en la pantalla */
+        pointer-events: none !important;
+      }
     </style>
-</head>
+  </head>
 
-<body x-data="appLector()"
-    class="bg-slate-900 text-slate-100 font-sans h-screen flex flex-col justify-between overflow-hidden select-none">
-
+  <body
+    x-data="appLector()"
+    class="bg-slate-900 text-slate-100 font-sans h-screen flex flex-col justify-between overflow-hidden select-none"
+  >
     <!-- Pantalla de carga (Theme Oscuro / Sleek) -->
-    <div id="page-loader"
-        class="fixed inset-0 z-[999] bg-slate-950/80 backdrop-blur-md flex items-center justify-center transition-opacity duration-500">
-        <div class="flex flex-col items-center">
-            <!-- Spinner con efecto Glow -->
-            <div class="relative flex items-center justify-center">
-                <div class="w-12 h-12 border-4 border-slate-800 border-t-emerald-500 rounded-full animate-spin"></div>
-                <!-- Brillo de fondo opcional -->
-                <div class="absolute w-12 h-12 bg-emerald-500/20 rounded-full blur-md -z-10"></div>
-            </div>
-
-            <!-- Texto aclarado para mejor contraste -->
-            <p class="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mt-4 animate-pulse">
-                Cargando BarCode...
-            </p>
+    <div
+      id="page-loader"
+      class="fixed inset-0 z-[999] bg-slate-950/80 backdrop-blur-md flex items-center justify-center transition-opacity duration-500"
+    >
+      <div class="flex flex-col items-center">
+        <!-- Spinner con efecto Glow -->
+        <div class="relative flex items-center justify-center">
+          <div
+            class="w-12 h-12 border-4 border-slate-800 border-t-emerald-500 rounded-full animate-spin"
+          ></div>
+          <!-- Brillo de fondo opcional -->
+          <div
+            class="absolute w-12 h-12 bg-emerald-500/20 rounded-full blur-md -z-10"
+          ></div>
         </div>
+
+        <!-- Texto aclarado para mejor contraste -->
+        <p
+          class="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mt-4 animate-pulse"
+        >
+          Cargando BarCode...
+        </p>
+      </div>
     </div>
 
     <!-- BARRA SUPERIOR (App Bar) -->
     <header
-        class="bg-slate-800/90 backdrop-blur-md px-4 py-3 flex justify-between items-center border-b border-slate-700/50 z-20">
-        <div class="flex items-center space-x-3">
-            <div class="p-2 bg-indigo-600/20 text-indigo-400 rounded-lg">
-                <i data-lucide="barcode-scanner" class="w-6 h-6"></i>
-            </div>
-            <div>
-                <h1 class="text-base font-semibold leading-tight"
-                    x-text="vistaActual === 'escaner' ? 'Escáner' : (vistaActual === 'inventario' ? 'Control de Inventario' : 'Historial de Envíos')">
-                </h1>
-                <p class="text-xs text-slate-400 flex items-center gap-1.5">
-                    <!-- El punto cambia de color y pulso según el estado de conexión -->
-                    <span :class="conexion ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'"
-                        class="w-2 h-2 rounded-full transition-colors duration-300"></span>
-
-                    <span x-text="urlServidor"></span>
-
-                    <!-- Opcional: Texto explicativo de estado -->
-                    <span x-text="conexion ? 'Online' : 'Offline'"
-                        :class="conexion ? 'text-emerald-400' : 'text-rose-400'"
-                        class=" ml-4 text-[10px] font-medium ml-0.5"></span>
-                </p>
-            </div>
+      class="bg-slate-800/90 backdrop-blur-md px-4 py-3 flex justify-between items-center border-b border-slate-700/50 z-20"
+    >
+      <div class="flex items-center space-x-3">
+        <div class="p-2 bg-indigo-600/20 text-indigo-400 rounded-lg">
+          <i data-lucide="barcode-scanner" class="w-6 h-6"></i>
         </div>
+        <div>
+          <h1
+            class="text-base font-semibold leading-tight"
+            x-text="vistaActual === 'escaner' ? 'Escáner' : (vistaActual === 'inventario' ? 'Control de Inventario' : 'Historial de Envíos')"
+          ></h1>
+          <p class="text-xs text-slate-400 flex items-center gap-1.5">
+            <!-- El punto cambia de color y pulso según el estado de conexión -->
+            <span
+              :class="conexion ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'"
+              class="w-2 h-2 rounded-full transition-colors duration-300"
+            ></span>
 
-        <!-- Contenedor agrupador con separación mínima -->
-        <div class="flex items-center gap-1">
+            <span x-text="urlServidor"></span>
 
-            <!-- Botón Forzar Recarga (Con el estilo del botón Config) -->
-            <button @click="forzarRecarga()" title="Forzar recarga (Ctrl+F5)"
-                class="p-2 text-slate-300 hover:text-white hover:bg-slate-700/50 active:scale-95 rounded-full transition-all flex items-center justify-center">
-                <i data-lucide="rotate-cw" class="w-5 h-5"></i>
-            </button>
-
-            <!-- Botón Configuración -->
-            <button @click="modalConfig = true" title="Configuración"
-                class="p-2 text-slate-300 hover:text-white hover:bg-slate-700/50 active:scale-95 rounded-full transition-all flex items-center justify-center">
-                <i data-lucide="settings" class="w-5 h-5"></i>
-            </button>
-
+            <!-- Opcional: Texto explicativo de estado -->
+            <span
+              x-text="conexion ? 'Online' : 'Offline'"
+              :class="conexion ? 'text-emerald-400' : 'text-rose-400'"
+              class="ml-4 text-[10px] font-medium ml-0.5"
+            ></span>
+          </p>
         </div>
+      </div>
+
+      <!-- Contenedor agrupador con separación mínima -->
+      <div class="flex items-center gap-1">
+        <!-- Botón Forzar Recarga (Con el estilo del botón Config) -->
+        <button
+          @click="forzarRecarga()"
+          title="Forzar recarga (Ctrl+F5)"
+          class="p-2 text-slate-300 hover:text-white hover:bg-slate-700/50 active:scale-95 rounded-full transition-all flex items-center justify-center"
+        >
+          <i data-lucide="rotate-cw" class="w-5 h-5"></i>
+        </button>
+
+        <!-- Botón Configuración -->
+        <button
+          @click="modalConfig = true"
+          title="Configuración"
+          class="p-2 text-slate-300 hover:text-white hover:bg-slate-700/50 active:scale-95 rounded-full transition-all flex items-center justify-center"
+        >
+          <i data-lucide="settings" class="w-5 h-5"></i>
+        </button>
+      </div>
     </header>
 
     <!-- CONTENEDOR PRINCIPAL -->
     <main class="relative flex-1 bg-slate-950 overflow-y-auto">
+      <!-- 1. VIEW: ESCÁNER USB DIRECTO -->
+      <div
+        x-show="vistaActual === 'escaner'"
+        class="h-full flex flex-col justify-center items-center relative bg-black"
+      >
+        <!-- Fondo cámara -->
+        <div
+          class="absolute inset-0 opacity-40 bg-cover bg-center"
+          style="
+            background-image: url(&quot;https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?auto=format&fit=crop&q=80&quot;);
+          "
+        ></div>
 
-        <!-- 1. VIEW: ESCÁNER USB DIRECTO -->
-        <div x-show="vistaActual === 'escaner'"
-            class="h-full flex flex-col justify-center items-center relative bg-black">
+        <!-- Cuadro Visor con Láser -->
+        <div
+          class="relative w-64 h-64 border-2 border-indigo-500/50 rounded-2xl flex flex-col justify-between p-2 shadow-2xl backdrop-blur-[2px]"
+        >
+          <div
+            class="absolute -top-1 -left-1 w-6 h-6 border-t-4 border-l-4 border-indigo-500 rounded-tl-lg"
+          ></div>
+          <div
+            class="absolute -top-1 -right-1 w-6 h-6 border-t-4 border-r-4 border-indigo-500 rounded-tr-lg"
+          ></div>
+          <div
+            class="absolute -bottom-1 -left-1 w-6 h-6 border-b-4 border-l-4 border-indigo-500 rounded-bl-lg"
+          ></div>
+          <div
+            class="absolute -bottom-1 -right-1 w-6 h-6 border-b-4 border-r-4 border-indigo-500 rounded-br-lg"
+          ></div>
 
-            <!-- Fondo cámara -->
-            <div class="absolute inset-0 opacity-40 bg-cover bg-center"
-                style="background-image: url('https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?auto=format&fit=crop&q=80');">
-            </div>
+          <div
+            class="scanner-laser absolute left-3 right-3 h-0.5 bg-red-500 shadow-[0_0_8px_#ef4444]"
+          ></div>
 
-            <!-- Cuadro Visor con Láser -->
+          <span
+            class="text-xs text-center text-slate-300 bg-slate-900/80 backdrop-blur-md py-1 px-3 rounded-full self-center my-auto border border-slate-700/50"
+          >
+            Emulando Teclado en PC...
+          </span>
+        </div>
+
+        <!-- Botón de Prueba para simular lectura -->
+        <button
+          @click="iniciarEscaneo()"
+          class="mt-6 text-xs bg-indigo-600/40 hover:bg-indigo-600 border border-indigo-500/50 px-4 py-2 rounded-full text-indigo-200 backdrop-blur-md active:scale-95 transition-all z-10"
+        >
+          ⚡ Simular Epnscaneo de Código
+        </button>
+
+        <!-- Botones Flotantes (Linterna) -->
+        <div class="absolute bottom-6 flex space-x-4">
+          <button
+            @click="toggleLinterna()"
+            :class="linterna ? 'bg-amber-500 text-slate-900' : 'bg-slate-800/80 text-slate-200'"
+            class="p-3 backdrop-blur-md rounded-full border border-slate-700 active:scale-95 transition-all"
+          >
+            <i data-lucide="zap" class="w-5 h-5"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- 2. VIEW: FORMULARIO DE INVENTARIO -->
+      <div
+        x-show="vistaActual === 'inventario'"
+        class="p-4 space-y-4 max-w-md mx-auto"
+      >
+        <!-- Botón para Disparar Escáner -->
+        <div
+          class="bg-slate-800 border border-slate-700 rounded-xl p-4 flex items-center justify-between"
+        >
+          <div>
+            <p class="text-xs text-slate-400">Escáner de Producto</p>
+            <p
+              class="text-sm font-semibold text-white"
+              x-text="inventario.codigo ? inventario.codigo : 'Ningún código leído'"
+            ></p>
+          </div>
+          <button
+            @click="simularEscaneo('7791234567890')"
+            class="px-3 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-semibold flex items-center gap-1 active:scale-95"
+          >
+            <i data-lucide="camera" class="w-4 h-4"></i> Escanear
+          </button>
+        </div>
+
+        <!-- Formulario Reactivo con Alpine -->
+        <template x-if="inventario.codigo">
+          <div
+            class="bg-slate-800 border border-slate-700 rounded-xl p-4 space-y-4"
+          >
             <div
-                class="relative w-64 h-64 border-2 border-indigo-500/50 rounded-2xl flex flex-col justify-between p-2 shadow-2xl backdrop-blur-[2px]">
-                <div class="absolute -top-1 -left-1 w-6 h-6 border-t-4 border-l-4 border-indigo-500 rounded-tl-lg">
-                </div>
-                <div class="absolute -top-1 -right-1 w-6 h-6 border-t-4 border-r-4 border-indigo-500 rounded-tr-lg">
-                </div>
-                <div class="absolute -bottom-1 -left-1 w-6 h-6 border-b-4 border-l-4 border-indigo-500 rounded-bl-lg">
-                </div>
-                <div class="absolute -bottom-1 -right-1 w-6 h-6 border-b-4 border-r-4 border-indigo-500 rounded-br-lg">
-                </div>
-
-                <div class="scanner-laser absolute left-3 right-3 h-0.5 bg-red-500 shadow-[0_0_8px_#ef4444]"></div>
-
-                <span
-                    class="text-xs text-center text-slate-300 bg-slate-900/80 backdrop-blur-md py-1 px-3 rounded-full self-center my-auto border border-slate-700/50">
-                    Emulando Teclado en PC...
-                </span>
-            </div>
-
-            <!-- Botón de Prueba para simular lectura -->
-            <button @click="iniciarEscaneo()"
-                class="mt-6 text-xs bg-indigo-600/40 hover:bg-indigo-600 border border-indigo-500/50 px-4 py-2 rounded-full text-indigo-200 backdrop-blur-md active:scale-95 transition-all z-10">
-                ⚡ Simular Epnscaneo de Código
-            </button>
-
-            <!-- Botones Flotantes (Linterna) -->
-            <div class="absolute bottom-6 flex space-x-4">
-                <button @click="toggleLinterna()"
-                    :class="linterna ? 'bg-amber-500 text-slate-900' : 'bg-slate-800/80 text-slate-200'"
-                    class="p-3 backdrop-blur-md rounded-full border border-slate-700 active:scale-95 transition-all">
-                    <i data-lucide="zap" class="w-5 h-5"></i>
-                </button>
-            </div>
-        </div>
-
-        <!-- 2. VIEW: FORMULARIO DE INVENTARIO -->
-        <div x-show="vistaActual === 'inventario'" class="p-4 space-y-4 max-w-md mx-auto">
-
-            <!-- Botón para Disparar Escáner -->
-            <div class="bg-slate-800 border border-slate-700 rounded-xl p-4 flex items-center justify-between">
-                <div>
-                    <p class="text-xs text-slate-400">Escáner de Producto</p>
-                    <p class="text-sm font-semibold text-white"
-                        x-text="inventario.codigo ? inventario.codigo : 'Ningún código leído'"></p>
-                </div>
-                <button @click="simularEscaneo('7791234567890')"
-                    class="px-3 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-semibold flex items-center gap-1 active:scale-95">
-                    <i data-lucide="camera" class="w-4 h-4"></i> Escanear
-                </button>
-            </div>
-
-            <!-- Formulario Reactivo con Alpine -->
-            <template x-if="inventario.codigo">
-                <div class="bg-slate-800 border border-slate-700 rounded-xl p-4 space-y-4">
-
-                    <div class="mb-4 flex items-center justify-between p-3 rounded-xl border transition-all duration-300"
-                        :class="inventario.id === null 
+              class="mb-4 flex items-center justify-between p-3 rounded-xl border transition-all duration-300"
+              :class="inventario.id === null 
         ? 'bg-blue-500/10 border-blue-500/30 text-blue-400' 
-            : 'bg-amber-500/10 border-amber-500/30 text-amber-400'">
+            : 'bg-amber-500/10 border-amber-500/30 text-amber-400'"
+            >
+              <div class="flex items-center gap-2">
+                <!-- Ícono dinámico -->
+                <i
+                  :data-lucide="inventario.id === null ? 'package-plus' : 'package-check'"
+                  class="w-5 h-5"
+                ></i>
 
-                        <div class="flex items-center gap-2">
-                            <!-- Ícono dinámico -->
-                            <i :data-lucide="inventario.id === null ? 'package-plus' : 'package-check'"
-                                class="w-5 h-5"></i>
+                <!-- Texto principal -->
+                <span
+                  class="text-xs font-bold uppercase tracking-wider"
+                  x-text="inventario.id === null ? 'Producto Nuevo' : 'Actualizar Producto'"
+                >
+                </span>
+              </div>
 
-                            <!-- Texto principal -->
-                            <span class="text-xs font-bold uppercase tracking-wider"
-                                x-text="inventario.id === null ? 'Producto Nuevo' : 'Actualizar Producto'">
-                            </span>
-                        </div>
-
-                        <!-- Subtexto indicativo -->
-                        <span class="text-[10px] font-medium opacity-80"
-                            x-text="inventario.id === null ? 'Se creará un nuevo registro' : `Editando ID: ${inventario.id}`">
-                        </span>
-                    </div>
-
-                    <div>
-                        <label class="block text-xs text-slate-400 mb-1">Nombre del Producto</label>
-                        <input type="text" x-model="inventario.nombre"
-                            class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-sm font-medium text-white">
-                    </div>
-
-                    <div class="grid grid-cols-2 gap-3">
-                        <div>
-                            <label class="block text-xs text-slate-400 mb-1">Stock Actual (BD)</label>
-                            <input type="text" readonly :value="inventario.stockActual"
-                                class="w-full bg-slate-900/50 border border-slate-800 rounded-lg p-2.5 text-sm text-slate-400">
-                        </div>
-                        <div>
-                            <label class="block text-xs text-slate-400 mb-1">Precio Costo</label>
-                            <input type="text" x-model="inventario.precioCosto"
-                                class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-sm text-emerald-400 font-semibold">
-                        </div>
-                    </div>
-
-                    <!-- Selector Unidad vs Kilos -->
-                    <div>
-                        <label class="block text-xs text-slate-400 mb-1">Tipo de Medida</label>
-                        <div class="grid grid-cols-2 gap-2">
-                            <button @click="setTipo('unidad')"
-                                :class="inventario.tipo === 'unidad' ? 'bg-indigo-600 border-indigo-500 text-white' : 'bg-slate-900 border-slate-700 text-slate-400'"
-                                class="py-2 border rounded-lg text-xs font-semibold transition-all">
-                                📦 Por Unidad (1, 2, 3)
-                            </button>
-                            <button @click="setTipo('kilos')"
-                                :class="inventario.tipo === 'kilos' ? 'bg-indigo-600 border-indigo-500 text-white' : 'bg-slate-900 border-slate-700 text-slate-400'"
-                                class="py-2 border rounded-lg text-xs font-semibold transition-all">
-                                ⚖️ Por Kilos (0.000)
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- Selector Operación (+ / -) -->
-                    <div>
-                        <label class="block text-xs text-slate-400 mb-1">Acción de Stock</label>
-                        <div class="grid grid-cols-2 gap-2">
-                            <button @click="inventario.operacion = 'sumar'"
-                                :class="inventario.operacion === 'sumar' ? 'bg-emerald-600 border-emerald-500 text-white' : 'bg-slate-900 border-slate-700 text-slate-400'"
-                                class="py-2 border rounded-lg text-xs font-semibold transition-all">
-                                ➕ SUMAR
-                            </button>
-                            <button @click="inventario.operacion = 'restar'"
-                                :class="inventario.operacion === 'restar' ? 'bg-rose-600 border-rose-500 text-white' : 'bg-slate-900 border-slate-700 text-slate-400'"
-                                class="py-2 border rounded-lg text-xs font-semibold transition-all">
-                                ➖ RESTAR
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- Cantidad con Step Dinámico -->
-                    <div>
-                        <label class="block text-xs text-slate-400 mb-1"
-                            x-text="`Cantidad a ${inventario.operacion === 'sumar' ? 'ingresar' : 'descontar'}`"></label>
-                        <input type="number" x-model="inventario.cantidad"
-                            :step="inventario.tipo === 'kilos' ? '0.001' : '1'"
-                            :min="inventario.tipo === 'kilos' ? '0.001' : '1'"
-                            class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-lg font-bold text-center text-white focus:outline-none focus:border-indigo-500">
-                    </div>
-
-                    <!-- Botón Guardar -->
-                    <button @click="guardarInventario()"
-                        class="w-full bg-emerald-600 hover:bg-emerald-500 py-3 rounded-xl font-bold text-sm text-white shadow-lg active:scale-95 transition-all flex justify-center items-center gap-2">
-                        <i data-lucide="save" class="w-4 h-4"></i> Guardar en Base de Datos
-                    </button>
-                </div>
-            </template>
-        </div>
-
-        <!-- 3. VIEW: HISTORIAL -->
-        <div x-show="vistaActual === 'historial'" class="p-4 space-y-3 max-w-md mx-auto">
-            <!-- CABECERA DEL HISTORIAL -->
-            <div class="flex justify-between items-center">
-                <h3 class="text-sm font-semibold text-slate-300 flex items-center gap-2">
-                    <i data-lucide="history" class="w-4 h-4 text-indigo-400"></i>
-                    Historial de Lecturas
-                </h3>
-                <!-- BOTÓN GENERAL: Borrar Todo -->
-                <template x-if="historial.length > 0">
-                    <button @click="modalBorrarHistorial = true"
-                        class="text-xs text-rose-400 hover:text-rose-300 flex items-center gap-1 font-medium bg-rose-500/10 px-2.5 py-1 rounded-lg border border-rose-500/20 transition-all">
-                        <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Borrar todo
-                    </button>
-                </template>
+              <!-- Subtexto indicativo -->
+              <span
+                class="text-[10px] font-medium opacity-80"
+                x-text="inventario.id === null ? 'Se creará un nuevo registro' : `Editando ID: ${inventario.id}`"
+              >
+              </span>
             </div>
 
-            <!-- LISTA VACÍA -->
-            <template x-if="historial.length === 0">
-                <div class="text-center py-8 text-slate-500 space-y-2">
-                    <i data-lucide="inbox" class="w-8 h-8 mx-auto opacity-50"></i>
-                    <p class="text-xs">No hay escaneos registrados todavía.</p>
-                </div>
-            </template>
-
-            <!-- LISTA DE ÍTEMS -->
-            <div class="space-y-2.5">
-                <template x-for="item in historial" :key="item.id">
-                    <div
-                        class="bg-slate-800/80 border border-slate-700/60 rounded-xl p-3 flex justify-between items-center shadow-sm">
-
-                        <!-- DATOS DEL REGISTRO -->
-                        <div class="space-y-1">
-                            <p class="text-sm font-mono text-white font-medium" x-text="item.codigo"></p>
-                            <div class="flex items-center gap-2 text-[11px] text-slate-400">
-                                <span class="px-1.5 py-0.5 rounded bg-slate-700/50 text-indigo-300 font-sans"
-                                    x-text="item.tipo"></span>
-                                <span>•</span>
-                                <!-- Fecha y Hora -->
-                                <span x-text="`${item.fecha || ''} ${item.hora}`"></span>
-                            </div>
-                        </div>
-
-                        <!-- ACCIONES / BOTONES -->
-                        <div class="flex items-center gap-1.5 ml-3">
-                            <!-- BOTÓN: Reenviar al servidor -->
-                            <button @click="reevaluarOEscanear(item.codigo)" title="Reenviar a Express"
-                                class="p-2 bg-indigo-600/20 hover:bg-indigo-600/40 text-indigo-400 hover:text-indigo-300 rounded-lg transition-colors">
-                                <i data-lucide="send" class="w-4 h-4"></i>
-                            </button>
-
-                            <!-- BOTÓN: Borrar Registro Individual -->
-                            <button @click="eliminarRegistro(item.id)" title="Eliminar"
-                                class="p-2 bg-slate-700/40 hover:bg-rose-500/20 text-slate-400 hover:text-rose-400 rounded-lg transition-colors">
-                                <i data-lucide="trash" class="w-4 h-4"></i>
-                            </button>
-                        </div>
-
-                    </div>
-                </template>
+            <div>
+              <label class="block text-xs text-slate-400 mb-1"
+                >Nombre del Producto</label
+              >
+              <input
+                type="text"
+                x-model="inventario.nombre"
+                class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-sm font-medium text-white"
+              />
             </div>
+
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block text-xs text-slate-400 mb-1"
+                  >Stock Actual (BD)</label
+                >
+                <input
+                  type="text"
+                  readonly
+                  :value="inventario.stockActual"
+                  class="w-full bg-slate-900/50 border border-slate-800 rounded-lg p-2.5 text-sm text-slate-400"
+                />
+              </div>
+              <div>
+                <label class="block text-xs text-slate-400 mb-1"
+                  >Precio Costo</label
+                >
+                <input
+                  type="text"
+                  x-model="inventario.precioCosto"
+                  class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-sm text-emerald-400 font-semibold"
+                />
+              </div>
+            </div>
+
+            <!-- Selector Unidad vs Kilos -->
+            <div>
+              <label class="block text-xs text-slate-400 mb-1"
+                >Tipo de Medida</label
+              >
+              <div class="grid grid-cols-2 gap-2">
+                <button
+                  @click="setTipo('unidad')"
+                  :class="inventario.tipo === 'unidad' ? 'bg-indigo-600 border-indigo-500 text-white' : 'bg-slate-900 border-slate-700 text-slate-400'"
+                  class="py-2 border rounded-lg text-xs font-semibold transition-all"
+                >
+                  📦 Por Unidad (1, 2, 3)
+                </button>
+                <button
+                  @click="setTipo('kilos')"
+                  :class="inventario.tipo === 'kilos' ? 'bg-indigo-600 border-indigo-500 text-white' : 'bg-slate-900 border-slate-700 text-slate-400'"
+                  class="py-2 border rounded-lg text-xs font-semibold transition-all"
+                >
+                  ⚖️ Por Kilos (0.000)
+                </button>
+              </div>
+            </div>
+
+            <!-- Selector Operación (+ / -) -->
+            <div>
+              <label class="block text-xs text-slate-400 mb-1"
+                >Acción de Stock</label
+              >
+              <div class="grid grid-cols-2 gap-2">
+                <button
+                  @click="inventario.operacion = 'sumar'"
+                  :class="inventario.operacion === 'sumar' ? 'bg-emerald-600 border-emerald-500 text-white' : 'bg-slate-900 border-slate-700 text-slate-400'"
+                  class="py-2 border rounded-lg text-xs font-semibold transition-all"
+                >
+                  ➕ SUMAR
+                </button>
+                <button
+                  @click="inventario.operacion = 'restar'"
+                  :class="inventario.operacion === 'restar' ? 'bg-rose-600 border-rose-500 text-white' : 'bg-slate-900 border-slate-700 text-slate-400'"
+                  class="py-2 border rounded-lg text-xs font-semibold transition-all"
+                >
+                  ➖ RESTAR
+                </button>
+              </div>
+            </div>
+
+            <!-- Cantidad con Step Dinámico -->
+            <div>
+              <label
+                class="block text-xs text-slate-400 mb-1"
+                x-text="`Cantidad a ${inventario.operacion === 'sumar' ? 'ingresar' : 'descontar'}`"
+              ></label>
+              <input
+                type="number"
+                x-model="inventario.cantidad"
+                :step="inventario.tipo === 'kilos' ? '0.001' : '1'"
+                :min="inventario.tipo === 'kilos' ? '0.001' : '1'"
+                class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-lg font-bold text-center text-white focus:outline-none focus:border-indigo-500"
+              />
+            </div>
+
+            <!-- Botón Guardar -->
+            <button
+              @click="guardarInventario()"
+              class="w-full bg-emerald-600 hover:bg-emerald-500 py-3 rounded-xl font-bold text-sm text-white shadow-lg active:scale-95 transition-all flex justify-center items-center gap-2"
+            >
+              <i data-lucide="save" class="w-4 h-4"></i> Guardar en Base de
+              Datos
+            </button>
+          </div>
+        </template>
+      </div>
+
+      <!-- 3. VIEW: HISTORIAL -->
+      <div
+        x-show="vistaActual === 'historial'"
+        class="p-4 space-y-3 max-w-md mx-auto"
+      >
+        <!-- CABECERA DEL HISTORIAL -->
+        <div class="flex justify-between items-center">
+          <h3
+            class="text-sm font-semibold text-slate-300 flex items-center gap-2"
+          >
+            <i data-lucide="history" class="w-4 h-4 text-indigo-400"></i>
+            Historial de Lecturas
+          </h3>
+          <!-- BOTÓN GENERAL: Borrar Todo -->
+          <template x-if="historial.length > 0">
+            <button
+              @click="modalBorrarHistorial = true"
+              class="text-xs text-rose-400 hover:text-rose-300 flex items-center gap-1 font-medium bg-rose-500/10 px-2.5 py-1 rounded-lg border border-rose-500/20 transition-all"
+            >
+              <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Borrar todo
+            </button>
+          </template>
         </div>
 
+        <!-- LISTA VACÍA -->
+        <template x-if="historial.length === 0">
+          <div class="text-center py-8 text-slate-500 space-y-2">
+            <i data-lucide="inbox" class="w-8 h-8 mx-auto opacity-50"></i>
+            <p class="text-xs">No hay escaneos registrados todavía.</p>
+          </div>
+        </template>
 
-        <div x-show="alertaScan" x-transition
-            class="fixed bottom-[100px] right-4 bg-emerald-500 text-white text-xs font-semibold px-4 py-2 rounded-full shadow-2xl flex items-center gap-2 border border-emerald-400 z-50">
+        <!-- LISTA DE ÍTEMS -->
+        <div class="space-y-2.5">
+          <template x-for="item in historial" :key="item.id">
+            <div
+              class="bg-slate-800/80 border border-slate-700/60 rounded-xl p-3 flex justify-between items-center shadow-sm"
+            >
+              <!-- DATOS DEL REGISTRO -->
+              <div class="space-y-1">
+                <p
+                  class="text-sm font-mono text-white font-medium"
+                  x-text="item.codigo"
+                ></p>
+                <div class="flex items-center gap-2 text-[11px] text-slate-400">
+                  <span
+                    class="px-1.5 py-0.5 rounded bg-slate-700/50 text-indigo-300 font-sans"
+                    x-text="item.tipo"
+                  ></span>
+                  <span>•</span>
+                  <!-- Fecha y Hora -->
+                  <span x-text="`${item.fecha || ''} ${item.hora}`"></span>
+                </div>
+              </div>
 
+              <!-- ACCIONES / BOTONES -->
+              <div class="flex items-center gap-1.5 ml-3">
+                <!-- BOTÓN: Reenviar al servidor -->
+                <button
+                  @click="reevaluarOEscanear(item.codigo)"
+                  title="Reenviar a Express"
+                  class="p-2 bg-indigo-600/20 hover:bg-indigo-600/40 text-indigo-400 hover:text-indigo-300 rounded-lg transition-colors"
+                >
+                  <i data-lucide="send" class="w-4 h-4"></i>
+                </button>
 
-            <i data-lucide="check-circle" class="w-4 h-4"></i>
-            <span>Enviado a PC: <strong x-text="ultimoCodigo"></strong></span>
+                <!-- BOTÓN: Borrar Registro Individual -->
+                <button
+                  @click="eliminarRegistro(item.id)"
+                  title="Eliminar"
+                  class="p-2 bg-slate-700/40 hover:bg-rose-500/20 text-slate-400 hover:text-rose-400 rounded-lg transition-colors"
+                >
+                  <i data-lucide="trash" class="w-4 h-4"></i>
+                </button>
+              </div>
+            </div>
+          </template>
         </div>
+      </div>
 
-
+      <div
+        x-show="alertaScan"
+        x-transition
+        class="fixed bottom-[100px] right-4 bg-emerald-500 text-white text-xs font-semibold px-4 py-2 rounded-full shadow-2xl flex items-center gap-2 border border-emerald-400 z-50"
+      >
+        <i data-lucide="check-circle" class="w-4 h-4"></i>
+        <span>Enviado a PC: <strong x-text="ultimoCodigo"></strong></span>
+      </div>
     </main>
 
     <!-- BARRA DE NAVEGACIÓN INFERIOR (Bottom Navigation) -->
 
+    <nav
+      class="bg-slate-800 border-t border-slate-700/50 px-4 py-2 flex justify-around items-center text-xs z-20"
+    >
+      <button
+        @click="vistaActual = 'escaner'"
+        :class="vistaActual === 'escaner' ? 'text-indigo-400 font-semibold' : 'text-slate-400'"
+        class="flex flex-col items-center space-y-1"
+      >
+        <div
+          :class="vistaActual === 'escaner' ? 'bg-indigo-600/20' : ''"
+          class="px-4 py-1 rounded-full transition-all"
+        >
+          <i data-lucide="camera" class="w-5 h-5"></i>
+        </div>
+        <span>Escáner</span>
+      </button>
 
-    <nav class="bg-slate-800 border-t border-slate-700/50 px-4 py-2 flex justify-around items-center text-xs z-20">
+      <button
+        @click="vistaActual = 'inventario'"
+        :class="vistaActual === 'inventario' ? 'text-indigo-400 font-semibold' : 'text-slate-400'"
+        class="flex flex-col items-center space-y-1"
+      >
+        <div
+          :class="vistaActual === 'inventario' ? 'bg-indigo-600/20' : ''"
+          class="px-4 py-1 rounded-full transition-all"
+        >
+          <i data-lucide="boxes" class="w-5 h-5"></i>
+        </div>
+        <span>Inventario</span>
+      </button>
 
-        <button @click="vistaActual = 'escaner'"
-            :class="vistaActual === 'escaner' ? 'text-indigo-400 font-semibold' : 'text-slate-400'"
-            class="flex flex-col items-center space-y-1">
-            <div :class="vistaActual === 'escaner' ? 'bg-indigo-600/20' : ''"
-                class="px-4 py-1 rounded-full transition-all">
-                <i data-lucide="camera" class="w-5 h-5"></i>
-            </div>
-            <span>Escáner</span>
-        </button>
-
-        <button @click="vistaActual = 'inventario'"
-            :class="vistaActual === 'inventario' ? 'text-indigo-400 font-semibold' : 'text-slate-400'"
-            class="flex flex-col items-center space-y-1">
-            <div :class="vistaActual === 'inventario' ? 'bg-indigo-600/20' : ''"
-                class="px-4 py-1 rounded-full transition-all">
-                <i data-lucide="boxes" class="w-5 h-5"></i>
-            </div>
-            <span>Inventario</span>
-        </button>
-
-        <button @click="vistaActual = 'historial'"
-            :class="vistaActual === 'historial' ? 'text-indigo-400 font-semibold' : 'text-slate-400'"
-            class="flex flex-col items-center space-y-1">
-            <div :class="vistaActual === 'historial' ? 'bg-indigo-600/20' : ''"
-                class="px-4 py-1 rounded-full transition-all">
-                <i data-lucide="history" class="w-5 h-5"></i>
-            </div>
-            <span>Historial</span>
-        </button>
-
+      <button
+        @click="vistaActual = 'historial'"
+        :class="vistaActual === 'historial' ? 'text-indigo-400 font-semibold' : 'text-slate-400'"
+        class="flex flex-col items-center space-y-1"
+      >
+        <div
+          :class="vistaActual === 'historial' ? 'bg-indigo-600/20' : ''"
+          class="px-4 py-1 rounded-full transition-all"
+        >
+          <i data-lucide="history" class="w-5 h-5"></i>
+        </div>
+        <span>Historial</span>
+      </button>
     </nav>
 
-
-
     <!-- MODAL CONFIGURACIÓN IP -->
-    <div x-show="modalConfig" x-transition
-        class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex justify-center items-center p-4">
-        <div @click.away="modalConfig = false"
-            class="bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-xs p-5 space-y-4 shadow-2xl">
-            <h2 class="text-base font-semibold flex items-center gap-2">
-                <i data-lucide="server" class="w-5 h-5 text-indigo-400"></i> Servidor PC
-            </h2>
-            <div class="space-y-3">
-                <div>
-                    <label class="block text-xs text-slate-300 mb-1">Dirección IP</label>
-                    <input type="text" x-model="ipServidor" placeholder="192.168.1.40"
-                        class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500">
-                </div>
-                <div>
-                    <label class="block text-xs text-slate-300 mb-1">Puerto</label>
-                    <input type="text" x-model="puertoServidor" placeholder="3000"
-                        class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500">
-                </div>
-            </div>
-
-            <div class="flex justify-end gap-2 pt-2">
-                <button @click="guardarConfiguracion()"
-                    class="w-full py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-lg transition-all">
-                    Guardar Configuración
-                </button>
-            </div>
+    <div
+      x-show="modalConfig"
+      x-transition
+      class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex justify-center items-center p-4"
+    >
+      <div
+        @click.away="modalConfig = false"
+        class="bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-xs p-5 space-y-4 shadow-2xl"
+      >
+        <h2 class="text-base font-semibold flex items-center gap-2">
+          <i data-lucide="server" class="w-5 h-5 text-indigo-400"></i> Servidor
+          PC
+        </h2>
+        <div class="space-y-3">
+          <div>
+            <label class="block text-xs text-slate-300 mb-1"
+              >Dirección IP</label
+            >
+            <input
+              type="text"
+              x-model="ipServidor"
+              placeholder="192.168.1.40"
+              class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500"
+            />
+          </div>
+          <div>
+            <label class="block text-xs text-slate-300 mb-1">Puerto</label>
+            <input
+              type="text"
+              x-model="puertoServidor"
+              placeholder="3000"
+              class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500"
+            />
+          </div>
         </div>
+
+        <div class="flex justify-end gap-2 pt-2">
+          <button
+            @click="guardarConfiguracion()"
+            class="w-full py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-lg transition-all"
+          >
+            Guardar Configuración
+          </button>
+        </div>
+      </div>
     </div>
 
     <!-- MODAL CONFIRMAR VACIAR HISTORIAL -->
-    <div x-show="modalBorrarHistorial" x-transition
-        class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex justify-center items-center p-4">
-        <div @click.away="modalBorrarHistorial = false"
-            class="bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-xs p-5 space-y-4 shadow-2xl">
+    <div
+      x-show="modalBorrarHistorial"
+      x-transition
+      class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex justify-center items-center p-4"
+    >
+      <div
+        @click.away="modalBorrarHistorial = false"
+        class="bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-xs p-5 space-y-4 shadow-2xl"
+      >
+        <!-- ENCABEZADO -->
+        <h2
+          class="text-base font-semibold flex items-center gap-2 text-rose-400"
+        >
+          <i data-lucide="alert-triangle" class="w-5 h-5"></i> ¿Vaciar
+          Historial?
+        </h2>
 
-            <!-- ENCABEZADO -->
-            <h2 class="text-base font-semibold flex items-center gap-2 text-rose-400">
-                <i data-lucide="alert-triangle" class="w-5 h-5"></i> ¿Vaciar Historial?
-            </h2>
+        <!-- CUERPO / MENSAJE -->
+        <p class="text-xs text-slate-300 leading-relaxed">
+          Se eliminarán todos los registros guardados localmente. Esta acción no
+          se puede deshacer.
+        </p>
 
-            <!-- CUERPO / MENSAJE -->
-            <p class="text-xs text-slate-300 leading-relaxed">
-                Se eliminarán todos los registros guardados localmente. Esta acción no se puede deshacer.
-            </p>
-
-            <!-- BOTONES CANCELAR Y ACEPTAR -->
-            <div class="flex justify-end gap-2 pt-2">
-                <button @click="modalBorrarHistorial = false"
-                    class="w-1/2 py-2 bg-slate-700 hover:bg-slate-600 text-slate-200 text-xs font-semibold rounded-lg transition-all">
-                    Cancelar
-                </button>
-                <button @click="vaciarHistorial()"
-                    class="w-1/2 py-2 bg-rose-600 hover:bg-rose-500 text-white text-xs font-semibold rounded-lg transition-all">
-                    Eliminar todo
-                </button>
-            </div>
+        <!-- BOTONES CANCELAR Y ACEPTAR -->
+        <div class="flex justify-end gap-2 pt-2">
+          <button
+            @click="modalBorrarHistorial = false"
+            class="w-1/2 py-2 bg-slate-700 hover:bg-slate-600 text-slate-200 text-xs font-semibold rounded-lg transition-all"
+          >
+            Cancelar
+          </button>
+          <button
+            @click="vaciarHistorial()"
+            class="w-1/2 py-2 bg-rose-600 hover:bg-rose-500 text-white text-xs font-semibold rounded-lg transition-all"
+          >
+            Eliminar todo
+          </button>
         </div>
+      </div>
     </div>
 
     <!-- ========================================== -->
     <!-- LÓGICA DE ALPINE.JS ORGANIZADA EN SCRIPT  -->
     <!-- ========================================== -->
     <script>
-
-        // Función global accesible por Java
-        window.recibirCodigoDesdeJava = function (codigo) {
-            // Obtiene la instancia de Alpine.js vinculada al body
-            const app = document.querySelector('[x-data]')._x_dataStack[0];
-            if (app) {
-                app.simularEscaneo(codigo);
-            }
-        };
-        function appLector() {
-            return {
-
-
-                // --- 1. ESTADO Y VARIABLES ---
-                vistaActual: 'escaner', // 'escaner', 'inventario', 'historial'
-                conexion: true,
-                // Configuración de Red por defecto
-                ipServidor: '192.168.1.40',
-                puertoServidor: '3000',
-                modalBorrarHistorial: false,
-                modalConfig: false,
-                linterna: false,
-                alertaScan: false,
-                ultimoCodigo: '',
-
-                inventario: {
-                    id: null,
-                    codigo: '',
-                    nombre: '',
-                    stockActual: 0,
-                    precioCosto: 0,
-                    tipo: 'unidad', // 'unidad' o 'kilos'
-                    operacion: 'sumar', // 'sumar' o 'restar'
-                    cantidad: 1
-                },
-
-                historial: [
-
-                ],
-
-                // --- 2. CICLO DE VIDA (INIT) ---
-                init() {
-
-                    this.cargarConfiguracion();
-                    this.cargarHistorial();
-
-                    this.$nextTick(() => lucide.createIcons());
-
-                    // 3. Ocultar el loader suavemente una vez que Alpine completó el montaje
-                    this.$nextTick(() => {
-                        const loader = document.getElementById('page-loader');
-                        if (loader) {
-                            loader.classList.add('loader-hidden');
-                            // Opcional: eliminar el elemento del DOM tras terminar la animación para liberar memoria
-                            setTimeout(() => loader.remove(), 500);
-                        }
-                    });
-                    // 2. Escuchar cambios de vista para volver a renderizar íconos
-                    this.$watch('vistaActual', () => {
-                        this.$nextTick(() => lucide.createIcons());
-                    });
-                },
-
-                toggleLinterna() {
-                    this.linterna = !this.linterna;
-
-                    if (window.AndroidNative && typeof window.AndroidNative.alternarLinterna === 'function') {
-                        window.AndroidNative.alternarLinterna(this.linterna);
-                    } else {
-                        console.log(`[SIMULACIÓN PC] Linterna: ${this.linterna ? 'ENCENDIDA' : 'APAGADA'}`);
-                    }
-                },
-
-                // --- 3. GETTERS ---
-                // Devuelve la dirección completa "192.168.1.40:3000"
-                get urlServidor() {
-                    return `${this.ipServidor}:${this.puertoServidor}`;
-                },
-
-                // --- 4. PERSISTENCIA EN LOCALSTORAGE ---
-                cargarConfiguracion() {
-                    const configGuardada = localStorage.getItem('config_servidor');
-                    if (configGuardada) {
-                        try {
-                            const config = JSON.parse(configGuardada);
-                            if (config.ip) this.ipServidor = config.ip;
-                            if (config.puerto) this.puertoServidor = config.puerto;
-                        } catch (e) {
-                            console.error('Error al leer localStorage:', e);
-                        }
-                    }
-                },
-
-                async guardarConfiguracion() {
-                    const config = {
-                        ip: this.ipServidor.trim(),
-                        puerto: this.puertoServidor.trim()
-                    };
-                    localStorage.setItem('config_servidor', JSON.stringify(config));
-                    this.modalConfig = false;
-
-                    // Probar conexión con la nueva IP/Puerto al guardar
-                    await this.testConexion();
-                },
-
-                // Test rápido de conexión sin procesar códigos
-                async testConexion() {
-                    try {
-                        const respuesta = await fetch(`http://${this.urlServidor}/api/escanear`, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ ping: true })
-                        });
-                        this.conexion = respuesta.ok;
-                    } catch (error) {
-                        this.conexion = false;
-                    }
-                },
-
-                // Dispara el escáner (Nativo si está en Android, o Simulado si está en PC)
-                iniciarEscaneo() {
-                    if (window.AndroidNative && typeof window.AndroidNative.abrirEscanerNativo === 'function') {
-                        window.AndroidNative.abrirEscanerNativo();
-
-                    } else {
-                        // console.warn('Ejecutando en navegador PC (Simulación)');
-                        this.simularEscaneo('7791234567890');
-
-                    }
-                    this.linterna = false;
-                },
-
-                // --- GESTIÓN DE HISTORIAL EN LOCALSTORAGE ---
-                cargarHistorial() {
-                    const historialGuardado = localStorage.getItem('historial_escaneos');
-                    if (historialGuardado) {
-                        try {
-                            this.historial = JSON.parse(historialGuardado);
-                            // console.log("Historial:", this.historial);
-                        } catch (e) {
-                            console.error('Error al leer historial:', e);
-                            this.historial = [];
-                        }
-                    }
-                },
-
-                guardarHistorialEnStorage() {
-                    localStorage.setItem('historial_escaneos', JSON.stringify(this.historial));
-                },
-
-                agregarAHistorial(codigo, tipo) {
-                    const ahora = new Date();
-                    // Formato Fecha: DD/MM/AAAA | Hora: HH:MM
-                    const fechaStr = ahora.toLocaleDateString();
-                    const horaStr = ahora.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-
-                    const nuevoRegistro = {
-                        id: Date.now(), // ID único para borrado
-                        codigo: codigo,
-                        tipo: tipo,
-                        fecha: fechaStr,
-                        hora: horaStr
-                    };
-
-
-
-                    this.historial.unshift(nuevoRegistro);
-                    this.guardarHistorialEnStorage();
-                },
-
-                eliminarRegistro(id) {
-                    this.historial = this.historial.filter(item => item.id !== id);
-                    this.guardarHistorialEnStorage();
-                },
-
-
-                vaciarHistorial() {
-                    this.historial = [];
-                    localStorage.removeItem('historial_escaneos');
-                    this.modalBorrarHistorial = false; // Cierra el modal
-                },
-
-                // --- 4. ACCIONES Y ESCANEO ---
-                async reevaluarOEscanear(codigo) {
-                    // Reenvía usando la función de siempre
-                    await this.envioCodeScannUsb(codigo);
-                },
-
-                // --- 2. MÉTODOS Y ACCIONES ---
-                async simularEscaneo(codigo) {
-                    this.ultimoCodigo = codigo;
-                    this.mostrarAlert();
-
-                    if (this.vistaActual === 'escaner') {
-                        await this.envioCodeScannUsb(codigo);
-                        this.agregarAHistorial(codigo, this.conexion ? 'Escaneo enviado' : 'Escaneo local');
-
-                    } else if (this.vistaActual === 'inventario') {
-                        await this.consultarProductoInventario(codigo);
-                    }
-                },
-
-
-
-
-                //Envio de codigo de barra para q valla a la ruta del teclado scaner usb real
-                async envioCodeScannUsb(codigo) {
-
-                    try {
-                        const respuesta = await fetch(`http://${this.urlServidor}/api/escanear`, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({
-                                codigo: codigo,
-                                tipo: this.vistaActual
-                            })
-                        });
-                        if (respuesta.ok) {
-                            this.conexion = true;
-                            const data = await respuesta.json();
-
-                        } else {
-                            this.conexion = false;
-                        }
-                    } catch (error) {
-                        this.conexion = false;
-                        console.error('Error al conectar con servidor PC:', error);
-                    }
-
-                },
-
-                // Petición 1: Consultar producto en Node.js
-                async consultarProductoInventario(codigo) {
-                    this.inventario.codigo = codigo;
-
-                    try {
-                        const respuesta = await fetch(`http://${this.urlServidor}/api/escanear/inventario/`, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ codigo: codigo })
-                        });
-
-                        if (respuesta.ok) {
-
-                            const producto = await respuesta.json();
-
-                            // Cargar datos en el formulario
-                            this.inventario.id = producto.id;
-                            this.inventario.nombre = producto.nombre || 'Producto Desconocido';
-                            this.inventario.stockActual = producto.stockActual || 0;
-                            this.inventario.precioCosto = producto.precioCosto || 0;
-                            this.setTipo(producto.tipo || 'unidad');
-                        } else {
-
-                            this.inventario.id = null;
-                        }
-                    } catch (error) {
-                        console.error('Error consultando producto:', error);
-                        this.conexion = false;
-                    }
-                },
-
-                // Petición 2: Guardar/Actualizar inventario en Node.js
-                async guardarInventario() {
-                    if (!this.inventario.codigo) {
-                        alert('Por favor escanea un producto primero.');
-                        return;
-                    }
-
-                    const payload = {
-                        codigo: this.inventario.codigo,
-                        operacion: this.inventario.operacion, // 'sumar' o 'restar'
-                        cantidad: parseFloat(this.inventario.cantidad),
-                        tipo: this.inventario.tipo
-                    };
-
-                    try {
-                        const respuesta = await fetch(`http://${this.urlServidor}/api/escanear/inventario/save`, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify(payload)
-                        });
-
-                        if (respuesta.ok) {
-                            this.conexion = true;
-                            const resultado = await respuesta.json();
-
-                            // Feedback visual y registro en historial local
-                            this.alertaScan = true;
-                            setTimeout(() => this.alertaScan = false, 3000);
-
-                            this.agregarAHistorial(
-                                this.inventario.codigo,
-                                `Stock (${this.inventario.operacion === 'sumar' ? '+' : '-'}${this.inventario.cantidad})`
-                            );
-
-                            // Limpiar formulario
-                            this.inventario.codigo = '';
-                            this.inventario.nombre = '';
-                            this.inventario.stockActual = 0;
-                            this.inventario.cantidad = 1;
-                        } else {
-                            this.conexion = false;
-                        }
-                    } catch (error) {
-                        console.error('Error al actualizar inventario:', error);
-                        this.conexion = false;
-                    }
-                },
-
-
-
-                setTipo(nuevoTipo) {
-                    this.inventario.tipo = nuevoTipo;
-                    this.inventario.cantidad = (nuevoTipo === 'kilos') ? 0.500 : 1;
-                },
-
-                guardarInventario() {
-                    alert(`[PETICIÓN A NODE.JS]\nGuardado con éxito:\nCódigo: ${this.inventario.codigo}\nAcción: ${this.inventario.operacion.toUpperCase()} ${this.inventario.cantidad} (${this.inventario.tipo})`);
-                    this.historial.unshift({
-                        codigo: this.inventario.codigo,
-                        tipo: `Inventario (${this.inventario.operacion === 'sumar' ? '+' : '-'}${this.inventario.cantidad})`,
-                        hora: new Date().toLocaleTimeString().slice(0, 5)
-                    });
-                    // Limpiar
-                    this.inventario.codigo = '';
-                    this.inventario.nombre = '';
-                },
-
-
-                // Inventario
-
-                iniciarEscaneoInventario() {
-                    this.vistaActual = 'inventario';
-                    this.iniciarEscaneo(); // Abre la cámara nativa
-                },
-
-                mostrarAlert(alert = true) {
-                    this.alertaScan = alert;
-                    setTimeout(() => this.alertaScan = false, 3000);
-                },
-                forzarRecarga() {
-                    // 1. Si estás usando la app servida desde la PC (HTTP)
-                    // El parámetro `true` fuerza a ignorar el caché del navegador/WebView
-                    window.location.reload(true);
-
-                    // 2. Si estás cargando desde un servidor local Node.js y quieres evitar el caché de CSS/JS:
-                    // window.location.href = window.location.pathname + '?v=' + new Date().getTime();
-                }
-
-
-            }
+      // Función global accesible por Java
+      window.recibirCodigoDesdeJava = function (codigo) {
+        // Obtiene la instancia de Alpine.js vinculada al body
+        const app = document.querySelector("[x-data]")._x_dataStack[0];
+        if (app) {
+          app.simularEscaneo(codigo);
         }
-    </script>
-</body>
+      };
+      function appLector() {
+        return {
+          // --- 1. ESTADO Y VARIABLES ---
+          vistaActual: "escaner", // 'escaner', 'inventario', 'historial'
+          conexion: true,
+          // Configuración de Red por defecto
+          ipServidor: "192.168.1.40",
+          puertoServidor: "3000",
+          modalBorrarHistorial: false,
+          modalConfig: false,
+          linterna: false,
+          alertaScan: false,
+          ultimoCodigo: "",
 
+          inventario: {
+            id: null,
+            codigo: "",
+            nombre: "",
+            stockActual: 0,
+            precioCosto: 0,
+            tipo: "unidad", // 'unidad' o 'kilos'
+            operacion: "sumar", // 'sumar' o 'restar'
+            cantidad: 1,
+          },
+
+          historial: [],
+
+          // --- 2. CICLO DE VIDA (INIT) ---
+          init() {
+            this.cargarConfiguracion();
+            this.cargarHistorial();
+
+            this.$nextTick(() => lucide.createIcons());
+
+            // 3. Ocultar el loader suavemente una vez que Alpine completó el montaje
+            this.$nextTick(() => {
+              const loader = document.getElementById("page-loader");
+              if (loader) {
+                loader.classList.add("loader-hidden");
+                // Opcional: eliminar el elemento del DOM tras terminar la animación para liberar memoria
+                setTimeout(() => loader.remove(), 500);
+              }
+            });
+            // 2. Escuchar cambios de vista para volver a renderizar íconos
+            this.$watch("vistaActual", () => {
+              this.$nextTick(() => lucide.createIcons());
+            });
+          },
+
+          toggleLinterna() {
+            this.linterna = !this.linterna;
+
+            if (
+              window.AndroidNative &&
+              typeof window.AndroidNative.alternarLinterna === "function"
+            ) {
+              window.AndroidNative.alternarLinterna(this.linterna);
+            } else {
+              console.log(
+                `[SIMULACIÓN PC] Linterna: ${this.linterna ? "ENCENDIDA" : "APAGADA"}`,
+              );
+            }
+          },
+
+          // --- 3. GETTERS ---
+          // Devuelve la dirección completa "192.168.1.40:3000"
+          get urlServidor() {
+            return `${this.ipServidor}:${this.puertoServidor}`;
+          },
+
+          // --- 4. PERSISTENCIA EN LOCALSTORAGE ---
+          cargarConfiguracion() {
+            const configGuardada = localStorage.getItem("config_servidor");
+            if (configGuardada) {
+              try {
+                const config = JSON.parse(configGuardada);
+                if (config.ip) this.ipServidor = config.ip;
+                if (config.puerto) this.puertoServidor = config.puerto;
+              } catch (e) {
+                console.error("Error al leer localStorage:", e);
+              }
+            }
+          },
+
+          async guardarConfiguracion() {
+            const config = {
+              ip: this.ipServidor.trim(),
+              puerto: this.puertoServidor.trim(),
+            };
+            localStorage.setItem("config_servidor", JSON.stringify(config));
+            this.modalConfig = false;
+
+            // Probar conexión con la nueva IP/Puerto al guardar
+            await this.testConexion();
+          },
+
+          // Test rápido de conexión sin procesar códigos
+          async testConexion() {
+            try {
+              const respuesta = await fetch(
+                `http://${this.urlServidor}/api/escanear`,
+                {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ ping: true }),
+                },
+              );
+              this.conexion = respuesta.ok;
+            } catch (error) {
+              this.conexion = false;
+            }
+          },
+
+          // Dispara el escáner (Nativo si está en Android, o Simulado si está en PC)
+          iniciarEscaneo() {
+            if (
+              window.AndroidNative &&
+              typeof window.AndroidNative.abrirEscanerNativo === "function"
+            ) {
+              window.AndroidNative.abrirEscanerNativo();
+            } else {
+              // console.warn('Ejecutando en navegador PC (Simulación)');
+              this.simularEscaneo("7791234567890");
+            }
+            this.linterna = false;
+          },
+
+          // --- GESTIÓN DE HISTORIAL EN LOCALSTORAGE ---
+          cargarHistorial() {
+            const historialGuardado =
+              localStorage.getItem("historial_escaneos");
+            if (historialGuardado) {
+              try {
+                this.historial = JSON.parse(historialGuardado);
+                // console.log("Historial:", this.historial);
+              } catch (e) {
+                console.error("Error al leer historial:", e);
+                this.historial = [];
+              }
+            }
+          },
+
+          guardarHistorialEnStorage() {
+            localStorage.setItem(
+              "historial_escaneos",
+              JSON.stringify(this.historial),
+            );
+          },
+
+          agregarAHistorial(codigo, tipo) {
+            const ahora = new Date();
+            // Formato Fecha: DD/MM/AAAA | Hora: HH:MM
+            const fechaStr = ahora.toLocaleDateString();
+            const horaStr = ahora.toLocaleTimeString([], {
+              hour: "2-digit",
+              minute: "2-digit",
+            });
+
+            const nuevoRegistro = {
+              id: Date.now(), // ID único para borrado
+              codigo: codigo,
+              tipo: tipo,
+              fecha: fechaStr,
+              hora: horaStr,
+            };
+
+            this.historial.unshift(nuevoRegistro);
+            this.guardarHistorialEnStorage();
+          },
+
+          eliminarRegistro(id) {
+            this.historial = this.historial.filter((item) => item.id !== id);
+            this.guardarHistorialEnStorage();
+          },
+
+          vaciarHistorial() {
+            this.historial = [];
+            localStorage.removeItem("historial_escaneos");
+            this.modalBorrarHistorial = false; // Cierra el modal
+          },
+
+          // --- 4. ACCIONES Y ESCANEO ---
+          async reevaluarOEscanear(codigo) {
+            // Reenvía usando la función de siempre
+            await this.envioCodeScannUsb(codigo);
+          },
+
+          // --- 2. MÉTODOS Y ACCIONES ---
+          async simularEscaneo(codigo) {
+            this.ultimoCodigo = codigo;
+            this.mostrarAlert();
+
+            if (this.vistaActual === "escaner") {
+              await this.envioCodeScannUsb(codigo);
+              this.agregarAHistorial(
+                codigo,
+                this.conexion ? "Escaneo enviado" : "Escaneo local",
+              );
+            } else if (this.vistaActual === "inventario") {
+              await this.consultarProductoInventario(codigo);
+            }
+          },
+
+          //Envio de codigo de barra para q valla a la ruta del teclado scaner usb real
+          async envioCodeScannUsb(codigo) {
+            try {
+              const respuesta = await fetch(
+                `http://${this.urlServidor}/api/escanear`,
+                {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    codigo: codigo,
+                    tipo: this.vistaActual,
+                  }),
+                },
+              );
+              if (respuesta.ok) {
+                this.conexion = true;
+                const data = await respuesta.json();
+              } else {
+                this.conexion = false;
+              }
+            } catch (error) {
+              this.conexion = false;
+              console.error("Error al conectar con servidor PC:", error);
+            }
+          },
+
+          // Petición 1: Consultar producto en Node.js
+          async consultarProductoInventario(codigo) {
+            this.inventario.codigo = codigo;
+
+            try {
+              const respuesta = await fetch(
+                `http://${this.urlServidor}/api/escanear/inventario/`,
+                {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ codigo: codigo }),
+                },
+              );
+
+              if (respuesta.ok) {
+                const producto = await respuesta.json();
+
+                // Cargar datos en el formulario
+                this.inventario.id = producto.id;
+                this.inventario.nombre =
+                  producto.nombre || "Producto Desconocido";
+                this.inventario.stockActual = producto.stockActual || 0;
+                this.inventario.precioCosto = producto.precioCosto || 0;
+                this.setTipo(producto.tipo || "unidad");
+              } else {
+                this.inventario.id = null;
+              }
+            } catch (error) {
+              console.error("Error consultando producto:", error);
+              this.conexion = false;
+            }
+          },
+
+          // Petición 2: Guardar/Actualizar inventario en Node.js
+          async guardarInventario() {
+            if (!this.inventario.codigo) {
+              alert("Por favor escanea un producto primero.");
+              return;
+            }
+
+            const payload = {
+              codigo: this.inventario.codigo,
+              operacion: this.inventario.operacion, // 'sumar' o 'restar'
+              cantidad: parseFloat(this.inventario.cantidad),
+              tipo: this.inventario.tipo,
+            };
+
+            try {
+              const respuesta = await fetch(
+                `http://${this.urlServidor}/api/escanear/inventario/save`,
+                {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify(payload),
+                },
+              );
+
+              if (respuesta.ok) {
+                this.conexion = true;
+                const resultado = await respuesta.json();
+
+                // Feedback visual y registro en historial local
+                this.alertaScan = true;
+                setTimeout(() => (this.alertaScan = false), 3000);
+
+                this.agregarAHistorial(
+                  this.inventario.codigo,
+                  `Stock (${this.inventario.operacion === "sumar" ? "+" : "-"}${this.inventario.cantidad})`,
+                );
+
+                // Limpiar formulario
+                this.inventario.codigo = "";
+                this.inventario.nombre = "";
+                this.inventario.stockActual = 0;
+                this.inventario.cantidad = 1;
+              } else {
+                this.conexion = false;
+              }
+            } catch (error) {
+              console.error("Error al actualizar inventario:", error);
+              this.conexion = false;
+            }
+          },
+
+          setTipo(nuevoTipo) {
+            this.inventario.tipo = nuevoTipo;
+            this.inventario.cantidad = nuevoTipo === "kilos" ? 0.5 : 1;
+          },
+
+          guardarInventario() {
+            alert(
+              `[PETICIÓN A NODE.JS]\nGuardado con éxito:\nCódigo: ${this.inventario.codigo}\nAcción: ${this.inventario.operacion.toUpperCase()} ${this.inventario.cantidad} (${this.inventario.tipo})`,
+            );
+            this.historial.unshift({
+              codigo: this.inventario.codigo,
+              tipo: `Inventario (${this.inventario.operacion === "sumar" ? "+" : "-"}${this.inventario.cantidad})`,
+              hora: new Date().toLocaleTimeString().slice(0, 5),
+            });
+            // Limpiar
+            this.inventario.codigo = "";
+            this.inventario.nombre = "";
+          },
+
+          // Inventario
+
+          iniciarEscaneoInventario() {
+            this.vistaActual = "inventario";
+            this.iniciarEscaneo(); // Abre la cámara nativa
+          },
+
+          mostrarAlert(alert = true) {
+            this.alertaScan = alert;
+            setTimeout(() => (this.alertaScan = false), 3000);
+          },
+          forzarRecarga() {
+            // 1. Si estás usando la app servida desde la PC (HTTP)
+            // El parámetro `true` fuerza a ignorar el caché del navegador/WebView
+            window.location.reload(true);
+
+            // 2. Si estás cargando desde un servidor local Node.js y quieres evitar el caché de CSS/JS:
+            // window.location.href = window.location.pathname + '?v=' + new Date().getTime();
+          },
+        };
+      }
+    </script>
+  </body>
 </html>
