@@ -7,6 +7,8 @@ coverage/
 .vscode/
 .idea/
 public/css/output.css
+icon_android/
 
 cypress/
 cypress.config.js
+node_modules
