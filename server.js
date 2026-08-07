@@ -70,21 +70,22 @@ app.post("/api/escanear/inventario", (req, res) => {
   // Simulación de respuesta de Base de Datos
   if (codigo === "7791234567890") {
     return res.json({
+
       id: 1,
-      codigo: codigo,
-      nombre: "Aceite de Girasol 1L",
-      stockActual: 15,
-      precioCosto: 1200,
-      tipo: "unidad",
+      codigo_barras: codigo,
+      nombre: 'producto de prueba',
+      stockActual: 5,
+      precio_costo_neto: 450.00,
+      porcentaje_ganacia: 50.00,
     });
   } else {
     return res.json({
       id: 2,
-      codigo: codigo,
+      codigo_barras: codigo,
       nombre: "Producto de Prueba General",
-      stockActual: 8.5,
-      precioCosto: 2500,
-      tipo: "kilos",
+      stockActual: 8,
+      precio_costo_neto: 2500,
+      porcentaje_ganacia: 50.00,
     });
   }
 });
