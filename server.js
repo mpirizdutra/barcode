@@ -1,7 +1,7 @@
 const express = require("express");
 const cors = require("cors");
-//const { exec } = require("child_process");
-const robot = require('robotjs');
+const { exec } = require("child_process");
+const robot = require("robotjs");
 const os = require("os");
 const fs = require("fs");
 const path = require("path");
@@ -11,7 +11,7 @@ const crypto = require("crypto");
 const app = express();
 const PORT = 2000;
 const MAX_DISPOSITIVOS = 20;
-const RUTA_ARCHIVO = path.join(process.cwd(), 'dispositivos.json');
+const RUTA_ARCHIVO = path.join(process.cwd(), "dispositivos.json");
 
 //keyboard.config.autoDelayMs = 0;
 
@@ -24,17 +24,17 @@ let dispositivos = [];
 
 if (fs.existsSync(RUTA_ARCHIVO)) {
   try {
-    const data = fs.readFileSync(RUTA_ARCHIVO, 'utf8');
+    const data = fs.readFileSync(RUTA_ARCHIVO, "utf8");
     dispositivos = JSON.parse(data);
   } catch (err) {
-    console.error('Error al leer dispositivos.json:', err);
+    console.error("Error al leer dispositivos.json:", err);
     dispositivos = [];
   }
 }
 
 const guardarDispositivos = () => {
   fs.writeFile(RUTA_ARCHIVO, JSON.stringify(dispositivos, null, 2), (err) => {
-    if (err) console.error('Error al guardar dispositivos:', err);
+    if (err) console.error("Error al guardar dispositivos:", err);
   });
 };
 
@@ -43,14 +43,13 @@ function obtenerIpLocal() {
   const interfaces = os.networkInterfaces();
   for (const name of Object.keys(interfaces)) {
     for (const iface of interfaces[name]) {
-      if (iface.family === 'IPv4' && !iface.internal) {
+      if (iface.family === "IPv4" && !iface.internal) {
         return iface.address;
       }
     }
   }
-  return '127.0.0.1';
+  return "127.0.0.1";
 }
-
 
 // -----------------------------------------------------------------------------
 // MIDDLEWARE GLOBAL DE AUTENTICACIÓN
@@ -58,27 +57,28 @@ function obtenerIpLocal() {
 // -----------------------------------------------------------------------------
 app.use((req, res, next) => {
   // 1. Excepción: Permitir test de conexión sin API Key
-  if (req.path === '/api/test' || req.path === '/vincular') {
+  if (req.path === "/api/test" || req.path === "/vincular") {
     return next();
   }
 
   // 2. Extraer API Key (busca en Headers, Body o Query String)
-  const apiKey = req.headers['x-api-key'] || req.body?.apiKey || req.query?.apiKey;
+  const apiKey =
+    req.headers["x-api-key"] || req.body?.apiKey || req.query?.apiKey;
 
   // 3. Validar si la API Key fue enviada
   if (!apiKey) {
     return res.status(400).json({
       ok: false,
-      mensaje: 'Falta la API Key en la petición.'
+      mensaje: "Falta la API Key en la petición.",
     });
   }
 
   // 4. Validar existencia en la lista de dispositivos autorizados
-  const existe = dispositivos.some(d => d.apiKey === apiKey);
+  const existe = dispositivos.some((d) => d.apiKey === apiKey);
   if (!existe) {
     return res.status(401).json({
       ok: false,
-      mensaje: 'API Key no autorizada o no registrada.'
+      mensaje: "API Key no autorizada o no registrada.",
     });
   }
 
@@ -91,7 +91,7 @@ app.use((req, res, next) => {
 // -----------------------------------------------------------------------------
 
 // --- RUTA GET: Vincular Dispositivo (HTML + QR) ---
-app.get('/vincular', async (req, res) => {
+app.get("/vincular", async (req, res) => {
   const ipLocal = obtenerIpLocal();
 
   // Validar límite
@@ -123,7 +123,7 @@ app.get('/vincular', async (req, res) => {
   const nuevaApiKey = crypto.randomUUID();
   dispositivos.push({
     apiKey: nuevaApiKey,
-    creado: new Date().toISOString()
+    creado: new Date().toISOString(),
   });
 
   guardarDispositivos();
@@ -132,7 +132,7 @@ app.get('/vincular', async (req, res) => {
   const payload = JSON.stringify({
     ip: ipLocal,
     puerto: PORT,
-    apiKey: nuevaApiKey
+    apiKey: nuevaApiKey,
   });
 
   try {
@@ -140,9 +140,9 @@ app.get('/vincular', async (req, res) => {
       width: 260,
       margin: 2,
       color: {
-        dark: '#0f172a',
-        light: '#ffffff'
-      }
+        dark: "#0f172a",
+        light: "#ffffff",
+      },
     });
 
     res.send(`
@@ -189,29 +189,28 @@ app.get('/vincular', async (req, res) => {
       </html>
     `);
   } catch (err) {
-    console.error('Error generando QR:', err);
-    res.status(500).send('Error al generar el código QR');
+    console.error("Error generando QR:", err);
+    res.status(500).send("Error al generar el código QR");
   }
 });
 
 // 1. ENDPOINT GET: Test rápido de conectividad desde la App / Navegador
-app.get('/api/test', (req, res) => {
-  console.log("Peticion para test...")
+app.get("/api/test", (req, res) => {
+  console.log("Peticion para test...");
   res.json({
     ok: true,
-    mensaje: 'Servidor de escaneo activo y alcanzable',
-    timestamp: new Date().toISOString()
+    mensaje: "Servidor de escaneo activo y alcanzable",
+    timestamp: new Date().toISOString(),
   });
 });
 
-app.post('/api/escanear', (req, res) => {
+app.post("/api/escanear", (req, res) => {
   try {
     const { codigo, tipo } = req.body;
 
-    if (!codigo || String(codigo).trim() === '') {
-      return res.status(400).json({ ok: false, mensaje: 'Código vacío' });
+    if (!codigo || String(codigo).trim() === "") {
+      return res.status(400).json({ ok: false, mensaje: "Código vacío" });
     }
-
 
     const codigoLimpio = String(codigo).trim();
     const plataforma = os.platform();
@@ -220,25 +219,51 @@ app.post('/api/escanear', (req, res) => {
     res.json({ ok: true, codigo: codigoLimpio, plataforma });
 
     // 2. Ejecutar el tipeo nativo en segundo plano
-    setImmediate(() => {
-      try {
-        robot.typeString(codigoLimpio);
-        robot.keyTap("enter");
+    if (plataforma === "win32") {
+      setImmediate(() => {
+        try {
+          robot.typeString(codigoLimpio);
+          robot.keyTap("enter");
 
-        console.log(`[USB EMULATOR] ⌨️ Tipeado exitoso en ${plataforma}: ${codigoLimpio}`);
-      } catch (err) {
-        console.error(`[USB EMULATOR] ❌ Error en emulación de teclado:`, err);
-      }
-    });
+          console.log(
+            `[USB EMULATOR ${plataforma}] ⌨️ Tipeado exitoso en ${plataforma}: ${codigoLimpio}`,
+          );
+        } catch (err) {
+          console.error(
+            `[USB EMULATOR ${plataforma}] ❌ Error en emulación de teclado:`,
+            err,
+          );
+        }
+      });
+    } else if (plataforma === "linux") {
+      const command = `wtype "${codigoLimpio}" && wtype -k Return`;
+      exec(command, (err) => {
+        if (err) {
+          console.error(
+            `[USB EMULATOR ${plataforma}] ❌ Error enviando teclas en ${plataforma}:`,
+            err,
+          );
+          return res.status(500).json({
+            ok: false,
+            mensaje: `Error al escribir en PC (${plataforma})`,
+          });
+        }
 
+        console.log(
+          `[USB EMULATOR ${plataforma}] ⌨️ Tipeado exitoso en ${plataforma}: ${codigoLimpio}`,
+        );
+        return res.json({ ok: true, codigo: codigoLimpio, plataforma });
+      });
+    }
   } catch (error) {
-    console.error('[USB EMULATOR] ❌ Error interno:', error);
+    console.error(`[USB EMULATOR ${plataforma}] ❌ Error interno:`, error);
     if (!res.headersSent) {
-      return res.status(500).json({ ok: false, mensaje: 'Error de servidor' });
+      return res.status(500).json({ ok: false, mensaje: "Error de servidor" });
     }
   }
 });
 
+//plataforma === "linux"
 // --- RUTA 1: Consultar datos del producto ---
 app.post("/api/escanear/inventario", (req, res) => {
   const { codigo } = req.body;
@@ -249,10 +274,10 @@ app.post("/api/escanear/inventario", (req, res) => {
     return res.json({
       id: 1,
       codigo_barras: codigo,
-      nombre: 'producto de prueba',
+      nombre: "producto de prueba",
       stockActual: 5,
-      precio_costo_neto: 450.00,
-      porcentaje_ganacia: 50.00,
+      precio_costo_neto: 450.0,
+      porcentaje_ganacia: 50.0,
     });
   } else {
     return res.json({
@@ -261,7 +286,7 @@ app.post("/api/escanear/inventario", (req, res) => {
       nombre: "Producto de Prueba General",
       stockActual: 8,
       precio_costo_neto: 2500,
-      porcentaje_ganacia: 50.00,
+      porcentaje_ganacia: 50.0,
     });
   }
 });
@@ -286,6 +311,8 @@ app.post("/api/escanear/inventario/save", (req, res) => {
 app.listen(PORT, "0.0.0.0", () => {
   const ipLocal = obtenerIpLocal();
   console.log(`🚀 Servidor listo escuchando en http://0.0.0.0:${PORT}`);
-  console.log(`📲 Para vincular la app abrí en el navegador: http://localhost:${PORT}/vincular`);
+  console.log(
+    `📲 Para vincular la app abrí en el navegador: http://localhost:${PORT}/vincular`,
+  );
   console.log(`💡 IP detectada en la red local: ${ipLocal}`);
 });
