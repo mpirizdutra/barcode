@@ -97,7 +97,15 @@
 
     <!-- Contenedor agrupador con separación mínima -->
     <div class="flex items-center gap-1">
+      <button @click="activarEscaneoQr()" :class="escanearModoQr 
+      ? 'bg-amber-500 hover:bg-amber-600 ring-2 ring-amber-300' 
+      : 'bg-indigo-600 hover:bg-indigo-500 active:scale-95'"
+        class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-white font-medium shadow-lg shadow-indigo-500/20 transition-all duration-200">
+        <!-- Icono de Google Material Icons -->
 
+        <i data-lucide="qr-code" class="w-5 h-5"></i>
+
+      </button>
       <!-- Botón Forzar Recarga (Con el estilo del botón Config) -->
       <button @click="forzarRecarga()" title="Forzar recarga (Ctrl+F5)"
         class="p-2 text-slate-300 hover:text-white hover:bg-slate-700/50 active:scale-95 rounded-full transition-all flex items-center justify-center">
@@ -164,16 +172,25 @@
     <div x-show="vistaActual === 'inventario'" class="p-4 space-y-4 max-w-md mx-auto">
 
       <!-- Botón para Disparar Escáner -->
-      <div class="bg-slate-800 border border-slate-700 rounded-xl p-4 flex items-center justify-between">
+      <div
+        class="bg-slate-800 border border-slate-700 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <p class="text-xs text-slate-400">Escáner de Producto</p>
-          <p class="text-sm font-semibold text-white"
-            x-text="inventario.codigo_barras ? inventario.codigo_barras : 'Ningún código leído'"></p>
+          <p class="text-xs text-slate-400 mt-0.5"
+            x-text="inventario.codigo_barras ? 'Buscando código: ' + inventario.codigo_barras : 'Ningún código leído'">
+          </p>
         </div>
-        <button @click="iniciarEscaneo()"
-          class="px-3 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-semibold flex items-center gap-1 active:scale-95">
-          <i data-lucide="camera" class="w-4 h-4"></i> Escanear
-        </button>
+
+        <div class="flex items-center gap-2">
+          <input type="text" inputmode="numeric" x-model="buscar_codigo"
+            @input="buscar_codigo = $event.target.value.replace(/[^0-9]/g, '')" placeholder="Ingresar código..."
+            class="bg-slate-900 border border-slate-700 text-white text-xs rounded-lg px-3 py-2 focus:outline-none focus:border-indigo-500 w-36 sm:w-44" />
+
+          <button @click="iniciarEscaneo()"
+            class="px-3 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-semibold flex items-center gap-1 active:scale-95 shrink-0 transition-colors">
+            <i data-lucide="camera" class="w-4 h-4"></i> Escanear
+          </button>
+        </div>
       </div>
 
       <!-- Formulario Reactivo con Alpine -->
@@ -355,6 +372,13 @@
       <span>Enviado a PC: <strong x-text="ultimoCodigo"></strong></span>
     </div>
 
+    <div x-show="mensajes" x-transition
+      class="fixed bottom-[100px] right-4 bg-emerald-500 text-white text-xs font-semibold px-4 py-2 rounded-full shadow-2xl flex items-center gap-2 border border-emerald-400 z-50">
+
+      <i data-lucide="triangle-alert" class="w-4 h-4"></i>
+      <span>Alerta... <strong x-text="msj"></strong></span>
+    </div>
+
 
   </main>
 
@@ -400,23 +424,48 @@
     class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex justify-center items-center p-4">
     <div @click.away="modalConfig = false"
       class="bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-xs p-5 space-y-4 shadow-2xl">
-      <h2 class="text-base font-semibold flex items-center gap-2">
-        <i data-lucide="server" class="w-5 h-5 text-indigo-400"></i> Servidor PC
-      </h2>
+
+      <div class="flex items-center justify-between">
+        <h2 class="text-base font-semibold flex items-center gap-2 text-white">
+          <i data-lucide="server" class="w-5 h-5 text-indigo-400"></i> Servidor PC
+        </h2>
+        <!-- Badge de Estado -->
+        <span x-cloak class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium"
+          :class="conexion ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'">
+          <span class="w-1.5 h-1.5 rounded-full"
+            :class="conexion ? 'bg-emerald-400 animate-pulse' : 'bg-rose-400'"></span>
+          <span x-text="conexion ? 'Conectado' : 'Sin conexión'"></span>
+        </span>
+      </div>
+
       <div class="space-y-3">
         <div>
           <label class="block text-xs text-slate-300 mb-1">Dirección IP</label>
-          <input type="text" x-model="ipServidor" placeholder="192.168.1.40"
+          <input type="text" x-model="config.ip" placeholder="192.168.1.40"
             class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500">
         </div>
         <div>
           <label class="block text-xs text-slate-300 mb-1">Puerto</label>
-          <input type="text" x-model="puertoServidor" placeholder="2000"
+          <input type="text" x-model="config.puerto" placeholder="2000"
             class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500">
         </div>
       </div>
 
-      <div class="flex justify-end gap-2 pt-2">
+      <!-- Botón de Test con cambio dinámico de color -->
+      <button type="button" @click="testConexion()" :disabled="probandoConexion"
+        class="w-full py-2 text-xs font-medium rounded-lg border flex items-center justify-center gap-2 transition-all duration-200"
+        :class="conexion 
+        ? 'bg-emerald-600 hover:bg-emerald-500 text-white border-emerald-500 shadow-md shadow-emerald-900/30' 
+        : 'bg-rose-600 hover:bg-rose-500 text-white border-rose-500 shadow-md shadow-rose-900/30'">
+
+        <!-- Ícono giratorio al probar conexión -->
+        <i data-lucide="refresh-cw" class="w-3.5 h-3.5" :class="probandoConexion ? 'animate-spin' : ''"></i>
+
+        <span
+          x-text="probandoConexion ? 'Probando...' : (conexion ? 'Conexión Exitosa' : 'Sin Conexión (Reintentar)')"></span>
+      </button>
+
+      <div class="flex justify-end gap-2 pt-1 border-t border-slate-700/60">
         <button @click="guardarConfiguracion()"
           class="w-full py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-lg transition-all">
           Guardar Configuración
@@ -464,32 +513,78 @@
 
     // Función global accesible por Java
     window.recibirCodigoDesdeJava = function (codigo) {
-      // Obtiene la instancia de Alpine.js vinculada al body
-      const app = document.querySelector('[x-data]')._x_dataStack[0];
-      if (app) {
-        if (this.vistaActual === 'escaner') {
-          app.simularEscaneo(codigo);
-        }
 
+      const app = document.querySelector('[x-data]')._x_dataStack[0];
+      if (!app) return;
+
+      const codigoLimpio = codigo ? codigo.trim() : '';
+      //console.log("datos Escaner: ", codigoLimpio);
+
+      // 1. Verificar si el código viene en formato JSON (como el QR de la imagen)
+      if (codigoLimpio.startsWith('{') && codigoLimpio.endsWith('}')) {
+        try {
+          const config = JSON.parse(codigoLimpio);
+
+          // Si contiene la IP y el Puerto para vinculación
+          if (config.ip && config.puerto && config.apiKey) {
+            app.config.ip = config.ip;
+            app.config.puerto = config.puerto;
+            app.config.apiKey = config.apiKey;
+
+            // Persistir en localStorage
+            app.guardarConfiguracion(); 4005900528223
+
+
+            // Apagar el botón de escaneo QR y notificar
+            app.escanearModoQr = false;
+            //test y msj
+            app.testConexion();
+            app.conexion ? app.msj = 'Conexion exitosa' : app.msj = 'No se pudo conectar';
+            app.mostrarMsj();
+            return;
+          }
+        } catch (e) {
+          console.error('Error al parsear el JSON del QR:', e);
+        }
       }
+      else {
+        // 2. Si es un escaneo normal de productos (código de barras)
+
+        app.simularEscaneo(codigoLimpio);
+      }
+
+
+      app.escanearModoQr = false;
+
     };
+    //Alpine
     function appLector() {
       return {
 
 
         // --- 1. ESTADO Y VARIABLES ---
+        escanearModoQr: false,
         vistaActual: 'escaner', // 'escaner', 'inventario', 'historial'
-        conexion: true,
+        conexion: false,
         // Configuración de Red por defecto
-        ipServidor: '192.168.1.40',
-        puertoServidor: '2000',
+        config: {
+          ip: 'xx',
+          puerto: 'xx',
+          apiKey: 'xx'
+        },
+        /*ipServidor: '192.168.1.40',
+        puertoServidor: '2000',*/
         modalBorrarHistorial: false,
         modalConfig: false,
         linterna: false,
         alertaScan: false,
+        mensajes: false,
+        msj: '',
+        buscar_codigo: '0',
         ultimoCodigo: '',
         precio_final: 0.00,
         guardarStock: 0,
+        probandoConexion: false,
         inventario: {
           id: null,
           codigo_barras: '',
@@ -508,10 +603,11 @@
         ],
 
         // --- 2. CICLO DE VIDA (INIT) ---
-        init() {
+        async init() {
 
           this.cargarConfiguracion();
           this.cargarHistorial();
+          await this.testConexion();
 
           this.$nextTick(() => lucide.createIcons());
 
@@ -529,6 +625,15 @@
             this.$nextTick(() => lucide.createIcons());
           });
         },
+        activarEscaneoQr() {
+          this.escanearModoQr = !this.escanearModoQr;
+
+          if (this.escanearModoQr && window.AndroidNative && typeof window.AndroidNative.abrirEscanerNativo === 'function') {
+
+            window.AndroidNative.abrirEscanerNativo();
+          }
+          this.linterna = false;
+        },
 
         toggleLinterna() {
           this.linterna = !this.linterna;
@@ -543,7 +648,7 @@
         // --- 3. GETTERS ---
         // Devuelve la dirección completa "192.168.1.40:3000"
         get urlServidor() {
-          return `${this.ipServidor}:${this.puertoServidor}`;
+          return `${this.config.ip}:${this.config.puerto}`;
         },
 
         // --- 4. PERSISTENCIA EN LOCALSTORAGE ---
@@ -551,9 +656,13 @@
           const configGuardada = localStorage.getItem('config_servidor');
           if (configGuardada) {
             try {
-              const config = JSON.parse(configGuardada);
-              if (config.ip) this.ipServidor = config.ip;
-              if (config.puerto) this.puertoServidor = config.puerto;
+              const save = JSON.parse(configGuardada);
+              console.log("cargar config");
+              console.log(save);
+              this.config.ip = save.ip ? save.ip : 'ip nada';
+              this.config.puerto = save.ip ? save.puerto : 'puerto nada';
+              this.config.apiKey = save.ip ? save.apiKey : 'apikey nada';
+
             } catch (e) {
               console.error('Error al leer localStorage:', e);
             }
@@ -561,39 +670,59 @@
         },
 
         async guardarConfiguracion() {
-          const config = {
-            ip: this.ipServidor.trim(),
-            puerto: this.puertoServidor.trim()
-          };
-          localStorage.setItem('config_servidor', JSON.stringify(config));
-          this.modalConfig = false;
 
-          // Probar conexión con la nueva IP/Puerto al guardar
-          await this.testConexion();
+          localStorage.setItem('config_servidor', JSON.stringify(this.config));
+          this.modalConfig = false;
+          console.log(`Configuracion server: http://${config.ip}:${config.puerto}/`);
+
+
         },
 
         // Test rápido de conexión sin procesar códigos
         async testConexion() {
+          this.probandoConexion = true;
           try {
-            const respuesta = await fetch(`http://${this.urlServidor}/api/escanear`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ ping: true })
+            //  console.log("Iniciando test de conexion...")
+            // 1. AbortController para timeout rápido de 3 segundos (evita congelar la UI si no hay red)
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 3000);
+
+            const respuesta = await fetch(`http://${this.urlServidor}/api/test`, {
+              method: 'GET',
+              signal: controller.signal
             });
+            //console.log("Repuesta del TEst Coenxion:", respuesta.ok)
+
+            clearTimeout(timeoutId);
             this.conexion = respuesta.ok;
           } catch (error) {
             this.conexion = false;
+            console.warn("falla", error)
+          }
+          finally {
+            this.probandoConexion = false;
           }
         },
 
         // Dispara el escáner (Nativo si está en Android, o Simulado si está en PC)
         iniciarEscaneo() {
+          if (document.activeElement && typeof document.activeElement.blur === 'function') {
+            document.activeElement.blur();
+          }
           if (window.AndroidNative && typeof window.AndroidNative.abrirEscanerNativo === 'function') {
             window.AndroidNative.abrirEscanerNativo();
 
           } else {
-            // console.warn('Ejecutando en navegador PC (Simulación)');
-            this.simularEscaneo('7791234567890');
+            // console.log('Ejecutando en navegador PC (Simulación)');
+
+            if (!this.buscar_codigo || this.buscar_codigo.trim() === '' || this.buscar_codigo.trim() === '0') {
+              this.buscar_codigo = '7791234567890';
+            }
+
+            // Ejecuta la simulación con el código por defecto o el introducido manualmente
+            this.simularEscaneo(this.buscar_codigo);
+
+
 
           }
           this.linterna = false;
@@ -658,16 +787,20 @@
         // --- 2. MÉTODOS Y ACCIONES ---
         async simularEscaneo(codigo) {
           this.ultimoCodigo = codigo;
-          this.mostrarAlert();
 
+          this.mostrarAlert();
           if (this.vistaActual === 'escaner') {
+
             await this.envioCodeScannUsb(codigo);
+
             this.agregarAHistorial(codigo, this.conexion ? 'Escaneo enviado' : 'Escaneo local');
 
           } else if (this.vistaActual === 'inventario') {
-            console.log("Vista acutal", this.vistaActual);
+
             await this.consultarProductoInventario(codigo);
           }
+
+
         },
 
 
@@ -675,25 +808,28 @@
 
         //Envio de codigo de barra para q valla a la ruta del teclado scaner usb real
         async envioCodeScannUsb(codigo) {
-
+          if (!this.conexion) { this.msj = 'No hay conexion'; this.mostrarMsj(); return; }
           try {
+            console.log(`http://${this.urlServidor}/api/escanear`)
             const respuesta = await fetch(`http://${this.urlServidor}/api/escanear`, {
               method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
+              headers: {
+                'Content-Type': 'application/json',
+                'x-api-key': this.config.apiKey
+              },
+
               body: JSON.stringify({
                 codigo: codigo,
                 tipo: this.vistaActual
               })
             });
             if (respuesta.ok) {
-              this.conexion = true;
+              //this.conexion = true;
               const data = await respuesta.json();
 
-            } else {
-              this.conexion = false;
             }
           } catch (error) {
-            this.conexion = false;
+            //this.conexion = false;
             console.error('Error al conectar con servidor PC:', error);
           }
 
@@ -702,12 +838,15 @@
         // Petición 1: Consultar producto en Node.js
         async consultarProductoInventario(codigo) {
           this.inventario.codigo_barras = codigo;
-          console.log("Entre", codigo)
+          //console.log("Entre", codigo)
 
           try {
             const respuesta = await fetch(`http://${this.urlServidor}/api/escanear/inventario/`, {
               method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
+              headers: {
+                'Content-Type': 'application/json',
+                'x-api-key': this.config.apiKey
+              },
               body: JSON.stringify({ codigo: codigo })
             });
 
@@ -731,7 +870,7 @@
             }
           } catch (error) {
             console.error('Error consultando producto:', error);
-            this.conexion = false;
+            // this.conexion = false;
           }
         },
 
@@ -752,7 +891,10 @@
            try {
              const respuesta = await fetch(`http://${this.urlServidor}/api/escanear/inventario/save`, {
                method: 'POST',
-               headers: { 'Content-Type': 'application/json' },
+               headers: {
+                'Content-Type': 'application/json',
+                'x-api-key': this.config.apiKey
+              },
                body: JSON.stringify(payload)
              });
  
@@ -813,6 +955,10 @@
         mostrarAlert(alert = true) {
           this.alertaScan = alert;
           setTimeout(() => this.alertaScan = false, 3000);
+        },
+        mostrarMsj(alert = true) {
+          this.mensajes = alert;
+          setTimeout(() => this.mensajes = false, 3000);
         },
         forzarRecarga() {
           // 1. Si estás usando la app servida desde la PC (HTTP)
