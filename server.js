@@ -20,34 +20,61 @@ app.use(cors());
 app.use(express.json());
 
 // --- PERSISTENCIA DE DISPOSITIVOS ---
+// --- PERSISTENCIA DE DISPOSITIVOS ---
 let dispositivos = [];
 
-if (fs.existsSync(RUTA_ARCHIVO)) {
+const guardarDispositivos = () => {
   try {
-    const data = fs.readFileSync(RUTA_ARCHIVO, "utf8");
-    dispositivos = JSON.parse(data);
+    fs.writeFileSync(
+      RUTA_ARCHIVO,
+      JSON.stringify(dispositivos, null, 2),
+      "utf8",
+    );
   } catch (err) {
-    console.error("Error al leer dispositivos.json:", err);
+    console.error("Error al guardar dispositivos.json:", err);
+  }
+};
+
+// Cargar o crear el archivo al iniciar el servidor
+if (!fs.existsSync(RUTA_ARCHIVO)) {
+  // 1. Si NO existe, se crea automáticamente con un array vacío []
+  guardarDispositivos();
+  console.log("📝 Archivo dispositivos.json creado por primera vez.");
+} else {
+  // 2. Si SÍ existe, lo leemos de forma segura
+  try {
+    const data = fs.readFileSync(RUTA_ARCHIVO, "utf8").trim();
+    // Si el archivo estaba completamente vacío, asignamos []
+    dispositivos = data ? JSON.parse(data) : [];
+  } catch (err) {
+    console.error(
+      "⚠️ Archivo dispositivos.json corrupto o inválido. Reiniciando a listado vacío:",
+      err.message,
+    );
     dispositivos = [];
+    guardarDispositivos(); // Reescribe el archivo con [] válido para corregirlo
   }
 }
-
-const guardarDispositivos = () => {
-  fs.writeFile(RUTA_ARCHIVO, JSON.stringify(dispositivos, null, 2), (err) => {
-    if (err) console.error("Error al guardar dispositivos:", err);
-  });
-};
 
 // --- HELPER PARA OBTENER LA IP DE LA RED LOCAL ---
 function obtenerIpLocal() {
   const interfaces = os.networkInterfaces();
+
   for (const name of Object.keys(interfaces)) {
+    // Ignorar la interfaz de Tailscale por nombre (común en Linux/macOS)
+    if (name.toLowerCase().includes("tailscale")) continue;
+
     for (const iface of interfaces[name]) {
-      if (iface.family === "IPv4" && !iface.internal) {
+      if (
+        iface.family === "IPv4" &&
+        !iface.internal &&
+        !iface.address.startsWith("100.") // Evita el rango Carrier-Grade NAT de Tailscale
+      ) {
         return iface.address;
       }
     }
   }
+
   return "127.0.0.1";
 }
 
@@ -195,16 +222,50 @@ app.get("/vincular", async (req, res) => {
 });
 
 // 1. ENDPOINT GET: Test rápido de conectividad desde la App / Navegador
-app.get("/api/test", (req, res) => {
-  console.log("Peticion para test...");
-  res.json({
-    ok: true,
-    mensaje: "Servidor de escaneo activo y alcanzable",
+// --- ENDPOINT GET/POST: Test de Conectividad y Diagnóstico de API Key ---
+app.all("/api/test", (req, res) => {
+  // Buscar API Key opcional en Headers, Query o Body
+  const apiKey =
+    req.headers["x-api-key"] || req.query?.apiKey || req.body?.apiKey;
+
+  // Caso 1: La petición no envió ninguna API Key (solo prueba de IP/Red)
+  if (!apiKey) {
+    return res.json({
+      ok: true,
+      conectado: true,
+      vinculado: false,
+      mensaje: "Servidor alcanzable. No se proporcionó API Key.",
+      timestamp: new Date().toISOString(),
+    });
+  }
+
+  // Caso 2: Se envió API Key y existe en la base de datos local
+  const dispositivoValido = dispositivos.some((d) => d.apiKey === apiKey);
+
+  if (dispositivoValido) {
+    return res.json({
+      ok: true,
+      conectado: true,
+      vinculado: true,
+      mensaje: "Conexión exitosa y dispositivo vinculado correctamente.",
+      timestamp: new Date().toISOString(),
+    });
+  }
+
+  // Caso 3: Se envió API Key pero NO existe en el servidor (fue eliminada/reseteada)
+  return res.status(200).json({
+    ok: false,
+    conectado: true,
+    vinculado: false,
+    requiereRevinculacion: true,
+    mensaje:
+      "Servidor alcanzable, pero el dispositivo no está vinculado. Debe escanear el QR nuevamente.",
     timestamp: new Date().toISOString(),
   });
 });
 
 app.post("/api/escanear", (req, res) => {
+  const plataforma = os.platform();
   try {
     const { codigo, tipo } = req.body;
 
@@ -213,14 +274,14 @@ app.post("/api/escanear", (req, res) => {
     }
 
     const codigoLimpio = String(codigo).trim();
-    const plataforma = os.platform();
 
     // 1. Responder INMEDIATAMENTE al cliente (< 10ms)
     res.json({ ok: true, codigo: codigoLimpio, plataforma });
 
     // 2. Ejecutar el tipeo nativo en segundo plano
-    if (plataforma === "win32") {
-      setImmediate(() => {
+
+    setImmediate(() => {
+      if (plataforma === "win32") {
         try {
           robot.typeString(codigoLimpio);
           robot.keyTap("enter");
@@ -234,27 +295,23 @@ app.post("/api/escanear", (req, res) => {
             err,
           );
         }
-      });
-    } else if (plataforma === "linux") {
-      const command = `wtype "${codigoLimpio}" && wtype -k Return`;
-      exec(command, (err) => {
-        if (err) {
-          console.error(
-            `[USB EMULATOR ${plataforma}] ❌ Error enviando teclas en ${plataforma}:`,
-            err,
-          );
-          return res.status(500).json({
-            ok: false,
-            mensaje: `Error al escribir en PC (${plataforma})`,
-          });
-        }
+      } else if (plataforma === "linux") {
+        const command = `wtype "${codigoLimpio}" && wtype -k Return`;
+        exec(command, (err) => {
+          if (err) {
+            console.error(
+              `[USB EMULATOR ${plataforma}] ❌ Error enviando teclas en ${plataforma}:`,
+              err,
+            );
+            return;
+          }
 
-        console.log(
-          `[USB EMULATOR ${plataforma}] ⌨️ Tipeado exitoso en ${plataforma}: ${codigoLimpio}`,
-        );
-        return res.json({ ok: true, codigo: codigoLimpio, plataforma });
-      });
-    }
+          console.log(
+            `[USB EMULATOR ${plataforma}] ⌨️ Tipeado exitoso en ${plataforma}: ${codigoLimpio}`,
+          );
+        });
+      }
+    });
   } catch (error) {
     console.error(`[USB EMULATOR ${plataforma}] ❌ Error interno:`, error);
     if (!res.headersSent) {

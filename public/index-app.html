@@ -1,882 +1,1146 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>App Lector & Inventario</title>
 
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>App Lector & Inventario</title>
+    <!--link rel="stylesheet" href="css/tailwind.min.css" /-->
+    <link rel="stylesheet" href="css/output.css" />
+    <script defer src="js/alpine.min.js"></script>
+    <script src="js/lucide.min.js"></script>
 
-  <!--link rel="stylesheet" href="css/tailwind.min.css" /-->
-  <link rel="stylesheet" href="css/output.css" />
-  <script defer src="js/alpine.min.js"></script>
-  <script src="js/lucide.min.js"></script>
-
-  <style>
-    /* Animación del láser del escáner */
-    .scanner-laser {
-      animation: scan 2s infinite ease-in-out;
-    }
-
-    @keyframes scan {
-
-      0%,
-      100% {
-        top: 10%;
+    <style>
+      /* Animación del láser del escáner */
+      .scanner-laser {
+        animation: scan 2s infinite ease-in-out;
       }
 
-      50% {
-        top: 90%;
-      }
-    }
+      @keyframes scan {
+        0%,
+        100% {
+          top: 10%;
+        }
 
-    /* [x-cloak] {
+        50% {
+          top: 90%;
+        }
+      }
+
+      /* [x-cloak] {
             display: none !important;
         }*/
 
-    /* Estilo para el desvanecimiento de carga */
-    #page-loader {
-      /* Agregamos pointer-events y organizamos la transición */
-      transition: opacity 0.5s ease-out, visibility 0.5s ease-out;
-      pointer-events: auto;
-    }
+      /* Estilo para el desvanecimiento de carga */
+      #page-loader {
+        /* Agregamos pointer-events y organizamos la transición */
+        transition:
+          opacity 0.5s ease-out,
+          visibility 0.5s ease-out;
+        pointer-events: auto;
+      }
 
-    .loader-hidden {
-      opacity: 0 !important;
-      visibility: hidden !important;
-      /* Evita que el loader invisible bloquee toques en la pantalla */
-      pointer-events: none !important;
-    }
-  </style>
-</head>
+      .loader-hidden {
+        opacity: 0 !important;
+        visibility: hidden !important;
+        /* Evita que el loader invisible bloquee toques en la pantalla */
+        pointer-events: none !important;
+      }
+    </style>
+  </head>
 
-<body x-data="appLector()"
-  class="bg-slate-900 text-slate-100 font-sans h-screen flex flex-col justify-between overflow-hidden select-none">
+  <body
+    x-data="appLector()"
+    class="bg-slate-900 text-slate-100 font-sans h-screen flex flex-col justify-between overflow-hidden select-none"
+  >
+    <!-- Pantalla de carga (Theme Oscuro / Sleek) -->
+    <div
+      id="page-loader"
+      class="fixed inset-0 z-[999] bg-slate-950/80 backdrop-blur-md flex items-center justify-center transition-opacity duration-500"
+    >
+      <div class="flex flex-col items-center">
+        <!-- Spinner con efecto Glow -->
+        <div class="relative flex items-center justify-center">
+          <div
+            class="w-12 h-12 border-4 border-slate-800 border-t-emerald-500 rounded-full animate-spin"
+          ></div>
+          <!-- Brillo de fondo opcional -->
+          <div
+            class="absolute w-12 h-12 bg-emerald-500/20 rounded-full blur-md -z-10"
+          ></div>
+        </div>
 
-  <!-- Pantalla de carga (Theme Oscuro / Sleek) -->
-  <div id="page-loader"
-    class="fixed inset-0 z-[999] bg-slate-950/80 backdrop-blur-md flex items-center justify-center transition-opacity duration-500">
-    <div class="flex flex-col items-center">
-      <!-- Spinner con efecto Glow -->
-      <div class="relative flex items-center justify-center">
-        <div class="w-12 h-12 border-4 border-slate-800 border-t-emerald-500 rounded-full animate-spin"></div>
-        <!-- Brillo de fondo opcional -->
-        <div class="absolute w-12 h-12 bg-emerald-500/20 rounded-full blur-md -z-10"></div>
-      </div>
-
-      <!-- Texto aclarado para mejor contraste -->
-      <p class="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mt-4 animate-pulse">
-        Cargando BarCode...
-      </p>
-    </div>
-  </div>
-
-  <!-- BARRA SUPERIOR (App Bar) -->
-  <header
-    class="bg-slate-800/90 backdrop-blur-md px-4 py-3 flex justify-between items-center border-b border-slate-700/50 z-20">
-    <div class="flex items-center space-x-3">
-      <div class="p-2 bg-indigo-600/20 text-indigo-400 rounded-lg">
-        <i data-lucide="barcode-scanner" class="w-6 h-6"></i>
-      </div>
-      <div>
-        <h1 class="text-base font-semibold leading-tight"
-          x-text="vistaActual === 'escaner' ? 'Escáner' : (vistaActual === 'inventario' ? 'Control de Inventario' : 'Historial de Envíos')">
-        </h1>
-        <p class="text-xs text-slate-400 flex items-center gap-1.5">
-          <!-- El punto cambia de color y pulso según el estado de conexión -->
-          <span :class="conexion ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'"
-            class="w-2 h-2 rounded-full transition-colors duration-300"></span>
-
-          <span x-text="urlServidor"></span>
-
-          <!-- Opcional: Texto explicativo de estado -->
-          <span x-text="conexion ? 'Online' : 'Offline'" :class="conexion ? 'text-emerald-400' : 'text-rose-400'"
-            class=" ml-4 text-[10px] font-medium ml-0.5"></span>
+        <!-- Texto aclarado para mejor contraste -->
+        <p
+          class="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mt-4 animate-pulse"
+        >
+          Cargando BarCode...
         </p>
       </div>
     </div>
 
-    <!-- Contenedor agrupador con separación mínima -->
-    <div class="flex items-center gap-1">
-      <button @click="activarEscaneoQr()" :class="escanearModoQr 
-      ? 'bg-amber-500 hover:bg-amber-600 ring-2 ring-amber-300' 
-      : 'bg-indigo-600 hover:bg-indigo-500 active:scale-95'"
-        class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-white font-medium shadow-lg shadow-indigo-500/20 transition-all duration-200">
-        <!-- Icono de Google Material Icons -->
-
-        <i data-lucide="qr-code" class="w-5 h-5"></i>
-
-      </button>
-      <!-- Botón Forzar Recarga (Con el estilo del botón Config) -->
-      <button @click="forzarRecarga()" title="Forzar recarga (Ctrl+F5)"
-        class="p-2 text-slate-300 hover:text-white hover:bg-slate-700/50 active:scale-95 rounded-full transition-all flex items-center justify-center">
-        <i data-lucide="rotate-cw" class="w-5 h-5"></i>
-      </button>
-
-      <!-- Botón Configuración -->
-      <button @click="modalConfig = true" title="Configuración"
-        class="p-2 text-slate-300 hover:text-white hover:bg-slate-700/50 active:scale-95 rounded-full transition-all flex items-center justify-center">
-        <i data-lucide="settings" class="w-5 h-5"></i>
-      </button>
-
-    </div>
-  </header>
-
-  <!-- CONTENEDOR PRINCIPAL -->
-  <main class="relative flex-1 bg-slate-950 overflow-y-auto">
-
-    <!-- 1. VIEW: ESCÁNER USB DIRECTO -->
-    <div x-show="vistaActual === 'escaner'" class="h-full flex flex-col justify-center items-center relative bg-black">
-
-      <!-- Fondo cámara -->
-      <div class="absolute inset-0 opacity-40 bg-cover bg-center"
-        style="background-image: url('https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?auto=format&fit=crop&q=80');">
-      </div>
-
-      <!-- Cuadro Visor con Láser -->
-      <div
-        class="relative w-64 h-64 border-2 border-indigo-500/50 rounded-2xl flex flex-col justify-between p-2 shadow-2xl backdrop-blur-[2px]">
-        <div class="absolute -top-1 -left-1 w-6 h-6 border-t-4 border-l-4 border-indigo-500 rounded-tl-lg">
+    <!-- BARRA SUPERIOR (App Bar) -->
+    <header
+      class="bg-slate-800/90 backdrop-blur-md px-4 py-3 flex justify-between items-center border-b border-slate-700/50 z-20"
+    >
+      <div class="flex items-center space-x-3">
+        <div class="p-2 bg-indigo-600/20 text-indigo-400 rounded-lg">
+          <i data-lucide="barcode-scanner" class="w-6 h-6"></i>
         </div>
-        <div class="absolute -top-1 -right-1 w-6 h-6 border-t-4 border-r-4 border-indigo-500 rounded-tr-lg">
-        </div>
-        <div class="absolute -bottom-1 -left-1 w-6 h-6 border-b-4 border-l-4 border-indigo-500 rounded-bl-lg">
-        </div>
-        <div class="absolute -bottom-1 -right-1 w-6 h-6 border-b-4 border-r-4 border-indigo-500 rounded-br-lg">
-        </div>
-
-        <div class="scanner-laser absolute left-3 right-3 h-0.5 bg-red-500 shadow-[0_0_8px_#ef4444]"></div>
-
-        <span
-          class="text-xs text-center text-slate-300 bg-slate-900/80 backdrop-blur-md py-1 px-3 rounded-full self-center my-auto border border-slate-700/50">
-          Emulando Teclado en PC...
-        </span>
-      </div>
-
-      <!-- Botón de Prueba para simular lectura -->
-      <button @click="iniciarEscaneo()"
-        class="mt-6 text-xs bg-indigo-600/40 hover:bg-indigo-600 border border-indigo-500/50 px-4 py-2 rounded-full text-indigo-200 backdrop-blur-md active:scale-95 transition-all z-10">
-        ⚡ Escanea tu codigo
-      </button>
-
-      <!-- Botones Flotantes (Linterna) -->
-      <div class="absolute bottom-6 flex space-x-4">
-        <button @click="toggleLinterna()"
-          :class="linterna ? 'bg-amber-500 text-slate-900' : 'bg-slate-800/80 text-slate-200'"
-          class="p-3 backdrop-blur-md rounded-full border border-slate-700 active:scale-95 transition-all">
-          <i data-lucide="zap" class="w-5 h-5"></i>
-        </button>
-      </div>
-    </div>
-
-    <!-- 2. VIEW: FORMULARIO DE INVENTARIO -->
-    <div x-show="vistaActual === 'inventario'" class="p-4 space-y-4 max-w-md mx-auto">
-
-      <!-- Botón para Disparar Escáner -->
-      <div
-        class="bg-slate-800 border border-slate-700 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <p class="text-xs text-slate-400">Escáner de Producto</p>
-          <p class="text-xs text-slate-400 mt-0.5"
-            x-text="inventario.codigo_barras ? 'Buscando código: ' + inventario.codigo_barras : 'Ningún código leído'">
+          <h1
+            class="text-base font-semibold leading-tight"
+            x-text="vistaActual === 'escaner' ? 'Escáner' : (vistaActual === 'inventario' ? 'Control de Inventario' : 'Historial de Envíos')"
+          ></h1>
+          <p class="text-xs text-slate-400 flex items-center gap-1.5">
+            <!-- El punto cambia de color y pulso según el estado de conexión -->
+            <span
+              :class="conexion ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'"
+              class="w-2 h-2 rounded-full transition-colors duration-300"
+            ></span>
+
+            <span x-text="urlServidor"></span>
+
+            <!-- Opcional: Texto explicativo de estado -->
+            <span
+              x-text="conexion ? 'Online' : 'Offline'"
+              :class="conexion ? 'text-emerald-400' : 'text-rose-400'"
+              class="ml-4 text-[10px] font-medium ml-0.5"
+            ></span>
           </p>
         </div>
+      </div>
 
-        <div class="flex items-center gap-2">
-          <input type="text" inputmode="numeric" x-model="buscar_codigo"
-            @input="buscar_codigo = $event.target.value.replace(/[^0-9]/g, '')" placeholder="Ingresar código..."
-            class="bg-slate-900 border border-slate-700 text-white text-xs rounded-lg px-3 py-2 focus:outline-none focus:border-indigo-500 w-36 sm:w-44" />
+      <!-- Contenedor agrupador con separación mínima -->
+      <div class="flex items-center gap-1">
+        <button
+          @click="activarEscaneoQr()"
+          :class="escanearModoQr 
+      ? 'bg-amber-500 hover:bg-amber-600 ring-2 ring-amber-300' 
+      : 'bg-indigo-600 hover:bg-indigo-500 active:scale-95'"
+          class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-white font-medium shadow-lg shadow-indigo-500/20 transition-all duration-200"
+        >
+          <!-- Icono de Google Material Icons -->
 
-          <button @click="iniciarEscaneo()"
-            class="px-3 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-semibold flex items-center gap-1 active:scale-95 shrink-0 transition-colors">
-            <i data-lucide="camera" class="w-4 h-4"></i> Escanear
+          <i data-lucide="qr-code" class="w-5 h-5"></i>
+        </button>
+        <!-- Botón Forzar Recarga (Con el estilo del botón Config) -->
+        <button
+          @click="forzarRecarga()"
+          title="Forzar recarga (Ctrl+F5)"
+          class="p-2 text-slate-300 hover:text-white hover:bg-slate-700/50 active:scale-95 rounded-full transition-all flex items-center justify-center"
+        >
+          <i data-lucide="rotate-cw" class="w-5 h-5"></i>
+        </button>
+
+        <!-- Botón Configuración -->
+        <button
+          @click="modalConfig = true"
+          title="Configuración"
+          class="p-2 text-slate-300 hover:text-white hover:bg-slate-700/50 active:scale-95 rounded-full transition-all flex items-center justify-center"
+        >
+          <i data-lucide="settings" class="w-5 h-5"></i>
+        </button>
+      </div>
+    </header>
+
+    <!-- CONTENEDOR PRINCIPAL -->
+    <main class="relative flex-1 bg-slate-950 overflow-y-auto">
+      <!-- 1. VIEW: ESCÁNER USB DIRECTO -->
+      <div
+        x-show="vistaActual === 'escaner'"
+        class="h-full flex flex-col justify-center items-center relative bg-black"
+      >
+        <!-- Fondo cámara -->
+        <div
+          class="absolute inset-0 opacity-40 bg-cover bg-center"
+          style="
+            background-image: url(&quot;https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?auto=format&fit=crop&q=80&quot;);
+          "
+        ></div>
+
+        <!-- Cuadro Visor con Láser -->
+        <div
+          class="relative w-64 h-64 border-2 border-indigo-500/50 rounded-2xl flex flex-col justify-between p-2 shadow-2xl backdrop-blur-[2px]"
+        >
+          <div
+            class="absolute -top-1 -left-1 w-6 h-6 border-t-4 border-l-4 border-indigo-500 rounded-tl-lg"
+          ></div>
+          <div
+            class="absolute -top-1 -right-1 w-6 h-6 border-t-4 border-r-4 border-indigo-500 rounded-tr-lg"
+          ></div>
+          <div
+            class="absolute -bottom-1 -left-1 w-6 h-6 border-b-4 border-l-4 border-indigo-500 rounded-bl-lg"
+          ></div>
+          <div
+            class="absolute -bottom-1 -right-1 w-6 h-6 border-b-4 border-r-4 border-indigo-500 rounded-br-lg"
+          ></div>
+
+          <div
+            class="scanner-laser absolute left-3 right-3 h-0.5 bg-red-500 shadow-[0_0_8px_#ef4444]"
+          ></div>
+
+          <span
+            class="text-xs text-center text-slate-300 bg-slate-900/80 backdrop-blur-md py-1 px-3 rounded-full self-center my-auto border border-slate-700/50"
+          >
+            Emulando Teclado en PC...
+          </span>
+        </div>
+
+        <!-- Botón de Prueba para simular lectura -->
+        <button
+          @click="iniciarEscaneo()"
+          class="mt-6 text-xs bg-indigo-600/40 hover:bg-indigo-600 border border-indigo-500/50 px-4 py-2 rounded-full text-indigo-200 backdrop-blur-md active:scale-95 transition-all z-10"
+        >
+          ⚡ Escanea tu codigo
+        </button>
+
+        <!-- Botones Flotantes (Linterna) -->
+        <div class="absolute bottom-6 flex space-x-4">
+          <button
+            @click="toggleLinterna()"
+            :class="linterna ? 'bg-amber-500 text-slate-900' : 'bg-slate-800/80 text-slate-200'"
+            class="p-3 backdrop-blur-md rounded-full border border-slate-700 active:scale-95 transition-all"
+          >
+            <i data-lucide="zap" class="w-5 h-5"></i>
           </button>
         </div>
       </div>
 
-      <!-- Formulario Reactivo con Alpine -->
-      <template x-if="inventario.codigo_barras">
-        <div class="bg-slate-800 border border-slate-700 rounded-xl p-4 space-y-4">
+      <!-- 2. VIEW: FORMULARIO DE INVENTARIO -->
+      <div
+        x-show="vistaActual === 'inventario'"
+        class="p-4 space-y-4 max-w-md mx-auto"
+      >
+        <!-- Botón para Disparar Escáner -->
+        <div
+          class="bg-slate-800 border border-slate-700 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+        >
+          <div>
+            <p class="text-xs text-slate-400">Escáner de Producto</p>
+            <p
+              class="text-xs text-slate-400 mt-0.5"
+              x-text="inventario.codigo_barras ? 'Buscando código: ' + inventario.codigo_barras : 'Ningún código leído'"
+            ></p>
+          </div>
 
-          <!-- Estado del Producto -->
-          <div class="mb-4 flex items-center justify-between p-3 rounded-xl border transition-all duration-300" :class="inventario.id === null
+          <div class="flex items-center gap-2">
+            <input
+              type="text"
+              inputmode="numeric"
+              x-model="buscar_codigo"
+              @input="buscar_codigo = $event.target.value.replace(/[^0-9]/g, '')"
+              placeholder="Ingresar código..."
+              class="bg-slate-900 border border-slate-700 text-white text-xs rounded-lg px-3 py-2 focus:outline-none focus:border-indigo-500 w-36 sm:w-44"
+            />
+
+            <button
+              @click="iniciarEscaneo()"
+              class="px-3 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-semibold flex items-center gap-1 active:scale-95 shrink-0 transition-colors"
+            >
+              <i data-lucide="camera" class="w-4 h-4"></i> Escanear
+            </button>
+          </div>
+        </div>
+
+        <!-- Formulario Reactivo con Alpine -->
+        <template x-if="inventario.codigo_barras">
+          <div
+            class="bg-slate-800 border border-slate-700 rounded-xl p-4 space-y-4"
+          >
+            <!-- Estado del Producto -->
+            <div
+              class="mb-4 flex items-center justify-between p-3 rounded-xl border transition-all duration-300"
+              :class="inventario.id === null
       ? 'bg-blue-500/10 border-blue-500/30 text-blue-400'
-      : 'bg-amber-500/10 border-amber-500/30 text-amber-400'">
+      : 'bg-amber-500/10 border-amber-500/30 text-amber-400'"
+            >
+              <div class="flex items-center gap-2">
+                <!-- Ícono dinámico -->
+                <i
+                  :data-lucide="inventario.id === null ? 'package-plus' : 'package-check'"
+                  class="w-5 h-5"
+                ></i>
 
-            <div class="flex items-center gap-2">
-              <!-- Ícono dinámico -->
-              <i :data-lucide="inventario.id === null ? 'package-plus' : 'package-check'" class="w-5 h-5"></i>
+                <!-- Texto principal -->
+                <span
+                  class="text-xs font-bold uppercase tracking-wider"
+                  x-text="inventario.id === null ? 'Producto Nuevo' : 'Actualizar Producto'"
+                >
+                </span>
+              </div>
 
-              <!-- Texto principal -->
-              <span class="text-xs font-bold uppercase tracking-wider"
-                x-text="inventario.id === null ? 'Producto Nuevo' : 'Actualizar Producto'">
+              <!-- Subtexto indicativo -->
+              <span
+                class="text-[10px] font-medium opacity-80"
+                x-text="inventario.id === null ? 'Se creará un nuevo registro' : `Editando ID: ${inventario.id}`"
+              >
               </span>
             </div>
 
-            <!-- Subtexto indicativo -->
-            <span class="text-[10px] font-medium opacity-80"
-              x-text="inventario.id === null ? 'Se creará un nuevo registro' : `Editando ID: ${inventario.id}`">
-            </span>
-          </div>
-
-          <!-- Nombre del Producto -->
-          <div>
-            <label class="block text-xs text-slate-400 mb-1">Codigo de barra</label>
-            <input type="text" x-model="inventario.codigo_barras"
-              class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-sm font-medium text-white">
-          </div>
-          <div>
-            <label class="block text-xs text-slate-400 mb-1">Nombre del Producto</label>
-            <input type="text" x-model="inventario.nombre"
-              class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-sm font-medium text-white">
-          </div>
-
-          <!-- SECCIÓN PRECIOS -->
-          <div class="space-y-3">
-            <!-- 1. PRECIO FINAL (A LO LARGO / ANCHO COMPLETO) -->
+            <!-- Nombre del Producto -->
             <div>
-              <label class="block text-xs text-slate-400 mb-1">Precio Final</label>
-              <input type="number" step="0.01" x-model.number="precio_final" @input="actualizarDesdePrecioFinal()"
-                class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-sm text-emerald-400 font-semibold">
+              <label class="block text-xs text-slate-400 mb-1"
+                >Codigo de barra</label
+              >
+              <input
+                type="text"
+                x-model="inventario.codigo_barras"
+                class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-sm font-medium text-white"
+              />
+            </div>
+            <div>
+              <label class="block text-xs text-slate-400 mb-1"
+                >Nombre del Producto</label
+              >
+              <input
+                type="text"
+                x-model="inventario.nombre"
+                class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-sm font-medium text-white"
+              />
             </div>
 
-            <!-- 2. COSTO ABAJO (IZQUIERDA) Y GANANCIA (DERECHA) -->
-            <div class="grid grid-cols-2 gap-3 mt-3">
+            <!-- SECCIÓN PRECIOS -->
+            <div class="space-y-3">
+              <!-- 1. PRECIO FINAL (A LO LARGO / ANCHO COMPLETO) -->
               <div>
-                <label class="block text-xs text-slate-400 mb-1">Precio Costo</label>
-                <input type="number" step="0.01" x-model.number="inventario.precio_costo_neto"
-                  @input="actualizarDesdeCosto()"
-                  class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-sm text-emerald-400 font-semibold">
-                <p x-show="errores.precio_costo_neto" x-text="errores.precio_costo_neto"
-                  class="text-xs text-red-500 font-bold mt-1 ml-1 uppercase"></p>
+                <label class="block text-xs text-slate-400 mb-1"
+                  >Precio Final</label
+                >
+                <input
+                  type="number"
+                  step="0.01"
+                  x-model.number="precio_final"
+                  @input="actualizarDesdePrecioFinal()"
+                  class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-sm text-emerald-400 font-semibold"
+                />
               </div>
 
-              <div>
-                <label class="block text-xs text-slate-400 mb-1">Ganancia %</label>
-                <!-- OJO AQUÍ: Se corrigió porcentaje_ganacia -> porcentaje_ganancia -->
-                <input type="number" step="0.1" x-model.number="inventario.porcentaje_ganancia"
-                  @input="actualizarDesdeGanancia()"
-                  class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-sm text-emerald-400 font-semibold">
+              <!-- 2. COSTO ABAJO (IZQUIERDA) Y GANANCIA (DERECHA) -->
+              <div class="grid grid-cols-2 gap-3 mt-3">
+                <div>
+                  <label class="block text-xs text-slate-400 mb-1"
+                    >Precio Costo</label
+                  >
+                  <input
+                    type="number"
+                    step="0.01"
+                    x-model.number="inventario.precio_costo_neto"
+                    @input="actualizarDesdeCosto()"
+                    class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-sm text-emerald-400 font-semibold"
+                  />
+                  <p
+                    x-show="errores.precio_costo_neto"
+                    x-text="errores.precio_costo_neto"
+                    class="text-xs text-red-500 font-bold mt-1 ml-1 uppercase"
+                  ></p>
+                </div>
+
+                <div>
+                  <label class="block text-xs text-slate-400 mb-1"
+                    >Ganancia %</label
+                  >
+                  <!-- OJO AQUÍ: Se corrigió porcentaje_ganacia -> porcentaje_ganancia -->
+                  <input
+                    type="number"
+                    step="0.1"
+                    x-model.number="inventario.porcentaje_ganancia"
+                    @input="actualizarDesdeGanancia()"
+                    class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-sm text-emerald-400 font-semibold"
+                  />
+                </div>
               </div>
             </div>
-          </div>
 
-
-
-          <!-- Selector Operación (+ / -) -->
-          <div>
+            <!-- Selector Operación (+ / -) -->
             <div>
-              <label class="block text-xs text-slate-400 mb-1">Stock Actual (BD)</label>
-              <input type="text" readonly :value="inventario.stockActual"
-                class="w-full bg-slate-900/50 border border-slate-800 rounded-lg p-2.5 text-sm text-slate-400">
+              <div>
+                <label class="block text-xs text-slate-400 mb-1"
+                  >Stock Actual (BD)</label
+                >
+                <input
+                  type="text"
+                  readonly
+                  :value="inventario.stockActual"
+                  class="w-full bg-slate-900/50 border border-slate-800 rounded-lg p-2.5 text-sm text-slate-400"
+                />
+              </div>
+              <label class="block text-xs text-slate-400 mb-1 mt-3"
+                >Acción de Stock</label
+              >
+              <div class="grid grid-cols-2 gap-2">
+                <button
+                  @click="inventario.operacion = 'sumar'"
+                  :class="inventario.operacion === 'sumar' ? 'bg-emerald-600 border-emerald-500 text-white' : 'bg-slate-900 border-slate-700 text-slate-400'"
+                  class="py-2 border rounded-lg text-xs font-semibold transition-all"
+                >
+                  ➕ SUMAR
+                </button>
+                <button
+                  @click="inventario.operacion = 'restar'"
+                  :class="inventario.operacion === 'restar' ? 'bg-rose-600 border-rose-500 text-white' : 'bg-slate-900 border-slate-700 text-slate-400'"
+                  class="py-2 border rounded-lg text-xs font-semibold transition-all"
+                >
+                  ➖ RESTAR
+                </button>
+              </div>
             </div>
-            <label class="block text-xs text-slate-400 mb-1 mt-3">Acción de Stock</label>
-            <div class="grid grid-cols-2 gap-2">
-              <button @click="inventario.operacion = 'sumar'"
-                :class="inventario.operacion === 'sumar' ? 'bg-emerald-600 border-emerald-500 text-white' : 'bg-slate-900 border-slate-700 text-slate-400'"
-                class="py-2 border rounded-lg text-xs font-semibold transition-all">
-                ➕ SUMAR
-              </button>
-              <button @click="inventario.operacion = 'restar'"
-                :class="inventario.operacion === 'restar' ? 'bg-rose-600 border-rose-500 text-white' : 'bg-slate-900 border-slate-700 text-slate-400'"
-                class="py-2 border rounded-lg text-xs font-semibold transition-all">
-                ➖ RESTAR
-              </button>
+
+            <!-- Cantidad con Step Dinámico -->
+            <div>
+              <label
+                class="block text-xs text-slate-400 mb-1"
+                x-text="`Cantidad a ${inventario.operacion === 'sumar' ? 'ingresar' : 'descontar'}`"
+              ></label>
+              <input
+                type="number"
+                x-model="inventario.cantidad"
+                @input="modificarStockVisual()"
+                step="1"
+                min="0"
+                class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-lg font-bold text-center text-white focus:outline-none focus:border-indigo-500"
+              />
             </div>
+
+            <!-- Botón Guardar -->
+            <button
+              @click="guardarInventario()"
+              class="w-full bg-emerald-600 hover:bg-emerald-500 py-3 rounded-xl font-bold text-sm text-white shadow-lg active:scale-95 transition-all flex justify-center items-center gap-2"
+            >
+              <i data-lucide="save" class="w-4 h-4"></i> Guardar en Base de
+              Datos
+            </button>
           </div>
-
-          <!-- Cantidad con Step Dinámico -->
-          <div>
-            <label class="block text-xs text-slate-400 mb-1"
-              x-text="`Cantidad a ${inventario.operacion === 'sumar' ? 'ingresar' : 'descontar'}`"></label>
-            <input type="number" x-model="inventario.cantidad" @input="modificarStockVisual()" step="1" min="0"
-              class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-lg font-bold text-center text-white focus:outline-none focus:border-indigo-500">
-          </div>
-
-          <!-- Botón Guardar -->
-          <button @click="guardarInventario()"
-            class="w-full bg-emerald-600 hover:bg-emerald-500 py-3 rounded-xl font-bold text-sm text-white shadow-lg active:scale-95 transition-all flex justify-center items-center gap-2">
-            <i data-lucide="save" class="w-4 h-4"></i> Guardar en Base de Datos
-          </button>
-        </div>
-      </template>
-    </div>
-
-    <!-- 3. VIEW: HISTORIAL -->
-    <div x-show="vistaActual === 'historial'" class="p-4 space-y-3 max-w-md mx-auto">
-      <!-- CABECERA DEL HISTORIAL -->
-      <div class="flex justify-between items-center">
-        <h3 class="text-sm font-semibold text-slate-300 flex items-center gap-2">
-          <i data-lucide="history" class="w-4 h-4 text-indigo-400"></i>
-          Historial de Lecturas
-        </h3>
-        <!-- BOTÓN GENERAL: Borrar Todo -->
-        <template x-if="historial.length > 0">
-          <button @click="modalBorrarHistorial = true"
-            class="text-xs text-rose-400 hover:text-rose-300 flex items-center gap-1 font-medium bg-rose-500/10 px-2.5 py-1 rounded-lg border border-rose-500/20 transition-all">
-            <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Borrar todo
-          </button>
         </template>
       </div>
 
-      <!-- LISTA VACÍA -->
-      <template x-if="historial.length === 0">
-        <div class="text-center py-8 text-slate-500 space-y-2">
-          <i data-lucide="inbox" class="w-8 h-8 mx-auto opacity-50"></i>
-          <p class="text-xs">No hay escaneos registrados todavía.</p>
+      <!-- 3. VIEW: HISTORIAL -->
+      <div
+        x-show="vistaActual === 'historial'"
+        class="p-4 space-y-3 max-w-md mx-auto"
+      >
+        <!-- CABECERA DEL HISTORIAL -->
+        <div class="flex justify-between items-center">
+          <h3
+            class="text-sm font-semibold text-slate-300 flex items-center gap-2"
+          >
+            <i data-lucide="history" class="w-4 h-4 text-indigo-400"></i>
+            Historial de Lecturas
+          </h3>
+          <!-- BOTÓN GENERAL: Borrar Todo -->
+          <template x-if="historial.length > 0">
+            <button
+              @click="modalBorrarHistorial = true"
+              class="text-xs text-rose-400 hover:text-rose-300 flex items-center gap-1 font-medium bg-rose-500/10 px-2.5 py-1 rounded-lg border border-rose-500/20 transition-all"
+            >
+              <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Borrar todo
+            </button>
+          </template>
         </div>
-      </template>
 
-      <!-- LISTA DE ÍTEMS -->
-      <div class="space-y-2.5">
-        <template x-for="item in historial" :key="item.id">
-          <div
-            class="bg-slate-800/80 border border-slate-700/60 rounded-xl p-3 flex justify-between items-center shadow-sm">
-
-            <!-- DATOS DEL REGISTRO -->
-            <div class="space-y-1">
-              <p class="text-sm font-mono text-white font-medium" x-text="item.codigo"></p>
-              <div class="flex items-center gap-2 text-[11px] text-slate-400">
-                <span class="px-1.5 py-0.5 rounded bg-slate-700/50 text-indigo-300 font-sans" x-text="item.tipo"></span>
-                <span>•</span>
-                <!-- Fecha y Hora -->
-                <span x-text="`${item.fecha || ''} ${item.hora}`"></span>
-              </div>
-            </div>
-
-            <!-- ACCIONES / BOTONES -->
-            <div class="flex items-center gap-1.5 ml-3">
-              <!-- BOTÓN: Reenviar al servidor -->
-              <button @click="reevaluarOEscanear(item.codigo)" title="Reenviar a Express"
-                class="p-2 bg-indigo-600/20 hover:bg-indigo-600/40 text-indigo-400 hover:text-indigo-300 rounded-lg transition-colors">
-                <i data-lucide="send" class="w-4 h-4"></i>
-              </button>
-
-              <!-- BOTÓN: Borrar Registro Individual -->
-              <button @click="eliminarRegistro(item.id)" title="Eliminar"
-                class="p-2 bg-slate-700/40 hover:bg-rose-500/20 text-slate-400 hover:text-rose-400 rounded-lg transition-colors">
-                <i data-lucide="trash" class="w-4 h-4"></i>
-              </button>
-            </div>
-
+        <!-- LISTA VACÍA -->
+        <template x-if="historial.length === 0">
+          <div class="text-center py-8 text-slate-500 space-y-2">
+            <i data-lucide="inbox" class="w-8 h-8 mx-auto opacity-50"></i>
+            <p class="text-xs">No hay escaneos registrados todavía.</p>
           </div>
         </template>
-      </div>
-    </div>
 
+        <!-- LISTA DE ÍTEMS -->
+        <div class="space-y-2.5">
+          <template x-for="item in historial" :key="item.id">
+            <div
+              class="bg-slate-800/80 border border-slate-700/60 rounded-xl p-3 flex justify-between items-center shadow-sm"
+            >
+              <!-- DATOS DEL REGISTRO -->
+              <div class="space-y-1">
+                <p
+                  class="text-sm font-mono text-white font-medium"
+                  x-text="item.codigo"
+                ></p>
+                <div class="flex items-center gap-2 text-[11px] text-slate-400">
+                  <span
+                    class="px-1.5 py-0.5 rounded bg-slate-700/50 text-indigo-300 font-sans"
+                    x-text="item.tipo"
+                  ></span>
+                  <span>•</span>
+                  <!-- Fecha y Hora -->
+                  <span x-text="`${item.fecha || ''} ${item.hora}`"></span>
+                </div>
+              </div>
 
-    <div x-show="alertaScan" x-transition
-      class="fixed bottom-[100px] right-4 bg-emerald-500 text-white text-xs font-semibold px-4 py-2 rounded-full shadow-2xl flex items-center gap-2 border border-emerald-400 z-50">
+              <!-- ACCIONES / BOTONES -->
+              <div class="flex items-center gap-1.5 ml-3">
+                <!-- BOTÓN: Reenviar al servidor -->
+                <button
+                  @click="reevaluarOEscanear(item.codigo)"
+                  title="Reenviar a Express"
+                  class="p-2 bg-indigo-600/20 hover:bg-indigo-600/40 text-indigo-400 hover:text-indigo-300 rounded-lg transition-colors"
+                >
+                  <i data-lucide="send" class="w-4 h-4"></i>
+                </button>
 
-
-      <i data-lucide="check-circle" class="w-4 h-4"></i>
-      <span>Enviado a PC: <strong x-text="ultimoCodigo"></strong></span>
-    </div>
-
-    <div x-show="mensajes" x-transition
-      class="fixed bottom-[100px] right-4 bg-emerald-500 text-white text-xs font-semibold px-4 py-2 rounded-full shadow-2xl flex items-center gap-2 border border-emerald-400 z-50">
-
-      <i data-lucide="triangle-alert" class="w-4 h-4"></i>
-      <span>Alerta... <strong x-text="msj"></strong></span>
-    </div>
-
-
-  </main>
-
-  <!-- BARRA DE NAVEGACIÓN INFERIOR (Bottom Navigation) -->
-
-
-  <nav class="bg-slate-800 border-t border-slate-700/50 px-4 py-2 flex justify-around items-center text-xs z-20">
-
-    <button @click="vistaActual = 'escaner'"
-      :class="vistaActual === 'escaner' ? 'text-indigo-400 font-semibold' : 'text-slate-400'"
-      class="flex flex-col items-center space-y-1">
-      <div :class="vistaActual === 'escaner' ? 'bg-indigo-600/20' : ''" class="px-4 py-1 rounded-full transition-all">
-        <i data-lucide="camera" class="w-5 h-5"></i>
-      </div>
-      <span>Escáner</span>
-    </button>
-
-    <button @click="vistaActual = 'inventario'"
-      :class="vistaActual === 'inventario' ? 'text-indigo-400 font-semibold' : 'text-slate-400'"
-      class="flex flex-col items-center space-y-1">
-      <div :class="vistaActual === 'inventario' ? 'bg-indigo-600/20' : ''"
-        class="px-4 py-1 rounded-full transition-all">
-        <i data-lucide="boxes" class="w-5 h-5"></i>
-      </div>
-      <span>Inventario</span>
-    </button>
-
-    <button @click="vistaActual = 'historial'"
-      :class="vistaActual === 'historial' ? 'text-indigo-400 font-semibold' : 'text-slate-400'"
-      class="flex flex-col items-center space-y-1">
-      <div :class="vistaActual === 'historial' ? 'bg-indigo-600/20' : ''" class="px-4 py-1 rounded-full transition-all">
-        <i data-lucide="history" class="w-5 h-5"></i>
-      </div>
-      <span>Historial</span>
-    </button>
-
-  </nav>
-
-
-
-  <!-- MODAL CONFIGURACIÓN IP -->
-  <div x-show="modalConfig" x-transition
-    class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex justify-center items-center p-4">
-    <div @click.away="modalConfig = false"
-      class="bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-xs p-5 space-y-4 shadow-2xl">
-
-      <div class="flex items-center justify-between">
-        <h2 class="text-base font-semibold flex items-center gap-2 text-white">
-          <i data-lucide="server" class="w-5 h-5 text-indigo-400"></i> Servidor PC
-        </h2>
-        <!-- Badge de Estado -->
-        <span x-cloak class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium"
-          :class="conexion ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'">
-          <span class="w-1.5 h-1.5 rounded-full"
-            :class="conexion ? 'bg-emerald-400 animate-pulse' : 'bg-rose-400'"></span>
-          <span x-text="conexion ? 'Conectado' : 'Sin conexión'"></span>
-        </span>
-      </div>
-
-      <div class="space-y-3">
-        <div>
-          <label class="block text-xs text-slate-300 mb-1">Dirección IP</label>
-          <input type="text" x-model="config.ip" placeholder="192.168.1.40"
-            class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500">
-        </div>
-        <div>
-          <label class="block text-xs text-slate-300 mb-1">Puerto</label>
-          <input type="text" x-model="config.puerto" placeholder="2000"
-            class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500">
+                <!-- BOTÓN: Borrar Registro Individual -->
+                <button
+                  @click="eliminarRegistro(item.id)"
+                  title="Eliminar"
+                  class="p-2 bg-slate-700/40 hover:bg-rose-500/20 text-slate-400 hover:text-rose-400 rounded-lg transition-colors"
+                >
+                  <i data-lucide="trash" class="w-4 h-4"></i>
+                </button>
+              </div>
+            </div>
+          </template>
         </div>
       </div>
 
-      <!-- Botón de Test con cambio dinámico de color -->
-      <button type="button" @click="testConexion()" :disabled="probandoConexion"
-        class="w-full py-2 text-xs font-medium rounded-lg border flex items-center justify-center gap-2 transition-all duration-200"
-        :class="conexion 
-        ? 'bg-emerald-600 hover:bg-emerald-500 text-white border-emerald-500 shadow-md shadow-emerald-900/30' 
-        : 'bg-rose-600 hover:bg-rose-500 text-white border-rose-500 shadow-md shadow-rose-900/30'">
+      <div
+        x-show="alertaScan"
+        x-transition
+        class="fixed bottom-[100px] right-4 bg-emerald-500 text-white text-xs font-semibold px-4 py-2 rounded-full shadow-2xl flex items-center gap-2 border border-emerald-400 z-50"
+      >
+        <i data-lucide="check-circle" class="w-4 h-4"></i>
+        <span>Enviado a PC: <strong x-text="ultimoCodigo"></strong></span>
+      </div>
 
-        <!-- Ícono giratorio al probar conexión -->
-        <i data-lucide="refresh-cw" class="w-3.5 h-3.5" :class="probandoConexion ? 'animate-spin' : ''"></i>
+      <div
+        x-show="mensajes"
+        x-transition
+        class="fixed bottom-[100px] right-4 bg-emerald-500 text-white text-xs font-semibold px-4 py-2 rounded-full shadow-2xl flex items-center gap-2 border border-emerald-400 z-50"
+      >
+        <i data-lucide="triangle-alert" class="w-4 h-4"></i>
+        <span>Alerta... <strong x-text="msj"></strong></span>
+      </div>
+    </main>
 
-        <span
-          x-text="probandoConexion ? 'Probando...' : (conexion ? 'Conexión Exitosa' : 'Sin Conexión (Reintentar)')"></span>
+    <!-- BARRA DE NAVEGACIÓN INFERIOR (Bottom Navigation) -->
+
+    <nav
+      class="bg-slate-800 border-t border-slate-700/50 px-4 py-2 flex justify-around items-center text-xs z-20"
+    >
+      <button
+        @click="vistaActual = 'escaner'"
+        :class="vistaActual === 'escaner' ? 'text-indigo-400 font-semibold' : 'text-slate-400'"
+        class="flex flex-col items-center space-y-1"
+      >
+        <div
+          :class="vistaActual === 'escaner' ? 'bg-indigo-600/20' : ''"
+          class="px-4 py-1 rounded-full transition-all"
+        >
+          <i data-lucide="camera" class="w-5 h-5"></i>
+        </div>
+        <span>Escáner</span>
       </button>
 
-      <div class="flex justify-end gap-2 pt-1 border-t border-slate-700/60">
-        <button @click="guardarConfiguracion()"
-          class="w-full py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-lg transition-all">
-          Guardar Configuración
+      <button
+        @click="vistaActual = 'inventario'"
+        :class="vistaActual === 'inventario' ? 'text-indigo-400 font-semibold' : 'text-slate-400'"
+        class="flex flex-col items-center space-y-1"
+      >
+        <div
+          :class="vistaActual === 'inventario' ? 'bg-indigo-600/20' : ''"
+          class="px-4 py-1 rounded-full transition-all"
+        >
+          <i data-lucide="boxes" class="w-5 h-5"></i>
+        </div>
+        <span>Inventario</span>
+      </button>
+
+      <button
+        @click="vistaActual = 'historial'"
+        :class="vistaActual === 'historial' ? 'text-indigo-400 font-semibold' : 'text-slate-400'"
+        class="flex flex-col items-center space-y-1"
+      >
+        <div
+          :class="vistaActual === 'historial' ? 'bg-indigo-600/20' : ''"
+          class="px-4 py-1 rounded-full transition-all"
+        >
+          <i data-lucide="history" class="w-5 h-5"></i>
+        </div>
+        <span>Historial</span>
+      </button>
+    </nav>
+
+    <!-- MODAL CONFIGURACIÓN IP -->
+    <div
+      x-show="modalConfig"
+      x-transition
+      class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex justify-center items-center p-4"
+    >
+      <div
+        @click.away="modalConfig = false"
+        class="bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-xs p-5 space-y-4 shadow-2xl"
+      >
+        <div class="flex items-center justify-between">
+          <h2
+            class="text-base font-semibold flex items-center gap-2 text-white"
+          >
+            <i data-lucide="server" class="w-5 h-5 text-indigo-400"></i>
+            Servidor PC
+          </h2>
+          <!-- Badge de Estado -->
+          <span
+            x-cloak
+            class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium"
+            :class="conexion ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'"
+          >
+            <span
+              class="w-1.5 h-1.5 rounded-full"
+              :class="conexion ? 'bg-emerald-400 animate-pulse' : 'bg-rose-400'"
+            ></span>
+            <span x-text="conexion ? 'Conectado' : 'Sin conexión'"></span>
+          </span>
+        </div>
+
+        <div class="space-y-3">
+          <div>
+            <label class="block text-xs text-slate-300 mb-1"
+              >Dirección IP</label
+            >
+            <input
+              type="text"
+              x-model="config.ip"
+              placeholder="192.168.1.40"
+              class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500"
+            />
+          </div>
+          <div>
+            <label class="block text-xs text-slate-300 mb-1">Puerto</label>
+            <input
+              type="text"
+              x-model="config.puerto"
+              placeholder="2000"
+              class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500"
+            />
+          </div>
+        </div>
+
+        <!-- Botón de Test con cambio dinámico de color -->
+        <button
+          type="button"
+          @click="testConexion()"
+          :disabled="probandoConexion"
+          class="w-full py-2 text-xs font-medium rounded-lg border flex items-center justify-center gap-2 transition-all duration-200"
+          :class="conexion 
+        ? 'bg-emerald-600 hover:bg-emerald-500 text-white border-emerald-500 shadow-md shadow-emerald-900/30' 
+        : 'bg-rose-600 hover:bg-rose-500 text-white border-rose-500 shadow-md shadow-rose-900/30'"
+        >
+          <!-- Ícono giratorio al probar conexión -->
+          <i
+            data-lucide="refresh-cw"
+            class="w-3.5 h-3.5"
+            :class="probandoConexion ? 'animate-spin' : ''"
+          ></i>
+
+          <span
+            x-text="probandoConexion ? 'Probando...' : (conexion ? 'Conexión Exitosa' : 'Sin Conexión (Reintentar)')"
+          ></span>
         </button>
+
+        <div class="flex justify-end gap-2 pt-1 border-t border-slate-700/60">
+          <button
+            @click="guardarConfiguracion()"
+            class="w-full py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-lg transition-all"
+          >
+            Guardar Configuración
+          </button>
+        </div>
       </div>
     </div>
-  </div>
 
-  <!-- MODAL CONFIRMAR VACIAR HISTORIAL -->
-  <div x-show="modalBorrarHistorial" x-transition
-    class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex justify-center items-center p-4">
-    <div @click.away="modalBorrarHistorial = false"
-      class="bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-xs p-5 space-y-4 shadow-2xl">
+    <!-- MODAL CONFIRMAR VACIAR HISTORIAL -->
+    <div
+      x-show="modalBorrarHistorial"
+      x-transition
+      class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex justify-center items-center p-4"
+    >
+      <div
+        @click.away="modalBorrarHistorial = false"
+        class="bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-xs p-5 space-y-4 shadow-2xl"
+      >
+        <!-- ENCABEZADO -->
+        <h2
+          class="text-base font-semibold flex items-center gap-2 text-rose-400"
+        >
+          <i data-lucide="alert-triangle" class="w-5 h-5"></i> ¿Vaciar
+          Historial?
+        </h2>
 
-      <!-- ENCABEZADO -->
-      <h2 class="text-base font-semibold flex items-center gap-2 text-rose-400">
-        <i data-lucide="alert-triangle" class="w-5 h-5"></i> ¿Vaciar Historial?
-      </h2>
+        <!-- CUERPO / MENSAJE -->
+        <p class="text-xs text-slate-300 leading-relaxed">
+          Se eliminarán todos los registros guardados localmente. Esta acción no
+          se puede deshacer.
+        </p>
 
-      <!-- CUERPO / MENSAJE -->
-      <p class="text-xs text-slate-300 leading-relaxed">
-        Se eliminarán todos los registros guardados localmente. Esta acción no se puede deshacer.
-      </p>
-
-      <!-- BOTONES CANCELAR Y ACEPTAR -->
-      <div class="flex justify-end gap-2 pt-2">
-        <button @click="modalBorrarHistorial = false"
-          class="w-1/2 py-2 bg-slate-700 hover:bg-slate-600 text-slate-200 text-xs font-semibold rounded-lg transition-all">
-          Cancelar
-        </button>
-        <button @click="vaciarHistorial()"
-          class="w-1/2 py-2 bg-rose-600 hover:bg-rose-500 text-white text-xs font-semibold rounded-lg transition-all">
-          Eliminar todo
-        </button>
+        <!-- BOTONES CANCELAR Y ACEPTAR -->
+        <div class="flex justify-end gap-2 pt-2">
+          <button
+            @click="modalBorrarHistorial = false"
+            class="w-1/2 py-2 bg-slate-700 hover:bg-slate-600 text-slate-200 text-xs font-semibold rounded-lg transition-all"
+          >
+            Cancelar
+          </button>
+          <button
+            @click="vaciarHistorial()"
+            class="w-1/2 py-2 bg-rose-600 hover:bg-rose-500 text-white text-xs font-semibold rounded-lg transition-all"
+          >
+            Eliminar todo
+          </button>
+        </div>
       </div>
     </div>
-  </div>
 
+    <!-- MODAL RE-VINCULACIÓN OBLIGATORIA -->
+    <div
+      x-show="modalRevincular"
+      x-transition
+      class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex justify-center items-center p-4"
+    >
+      <div
+        class="bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-xs p-5 space-y-4 shadow-2xl text-center"
+      >
+        <!-- ENCABEZADO / ÍCONO -->
+        <div class="flex flex-col items-center gap-2">
+          <div
+            class="p-3 bg-amber-500/10 text-amber-400 rounded-full border border-amber-500/20"
+          >
+            <i data-lucide="unplug" class="w-7 h-7"></i>
+          </div>
+          <h2 class="text-base font-semibold text-slate-100 mt-1">
+            Dispositivo Desvinculado
+          </h2>
+        </div>
 
+        <!-- CUERPO / MENSAJE EXPLICATIVO -->
+        <p class="text-xs text-slate-300 leading-relaxed">
+          Se perdió la autorización con el servidor. Es necesario volver a
+          escanear el código QR para sincronizar el dispositivo.
+        </p>
 
-  <!-- ========================================== -->
-  <!-- LÓGICA DE ALPINE.JS ORGANIZADA EN SCRIPT  -->
-  <!-- ========================================== -->
-  <script>
+        <!-- BOTÓN DE ACCIÓN ÚNICA -->
+        <div class="pt-2">
+          <button
+            @click="activarEscaneoQr()"
+            class="w-full py-2.5 bg-amber-600 hover:bg-amber-500 text-white text-xs font-semibold rounded-xl shadow-lg shadow-amber-600/20 transition-all flex items-center justify-center gap-2"
+          >
+            <i data-lucide="qr-code" class="w-4 h-4"></i>
+            Vincular Dispositivo
+          </button>
+        </div>
+      </div>
+    </div>
 
-    // Función global accesible por Java
-    window.recibirCodigoDesdeJava = function (codigo) {
+    <!-- ========================================== -->
+    <!-- LÓGICA DE ALPINE.JS ORGANIZADA EN SCRIPT  -->
+    <!-- ========================================== -->
+    <script>
+      // Función global accesible por Java
+      window.recibirCodigoDesdeJava = function (codigo) {
+        const app = document.querySelector("[x-data]")._x_dataStack[0];
+        if (!app) return;
 
-      const app = document.querySelector('[x-data]')._x_dataStack[0];
-      if (!app) return;
+        const codigoLimpio = codigo ? codigo.trim() : "";
+        //console.log("datos Escaner: ", codigoLimpio);
 
-      const codigoLimpio = codigo ? codigo.trim() : '';
-      //console.log("datos Escaner: ", codigoLimpio);
+        // 1. Verificar si el código viene en formato JSON (como el QR de la imagen)
+        if (codigoLimpio.startsWith("{") && codigoLimpio.endsWith("}")) {
+          try {
+            const config = JSON.parse(codigoLimpio);
 
-      // 1. Verificar si el código viene en formato JSON (como el QR de la imagen)
-      if (codigoLimpio.startsWith('{') && codigoLimpio.endsWith('}')) {
-        try {
-          const config = JSON.parse(codigoLimpio);
+            // Si contiene la IP y el Puerto para vinculación
+            if (config.ip && config.puerto && config.apiKey) {
+              app.config.ip = config.ip;
+              app.config.puerto = config.puerto;
+              app.config.apiKey = config.apiKey;
 
-          // Si contiene la IP y el Puerto para vinculación
-          if (config.ip && config.puerto && config.apiKey) {
-            app.config.ip = config.ip;
-            app.config.puerto = config.puerto;
-            app.config.apiKey = config.apiKey;
+              // Persistir en localStorage
+              app.guardarConfiguracion();
+              4005900528223;
 
-            // Persistir en localStorage
-            app.guardarConfiguracion(); 4005900528223
-
-
-            // Apagar el botón de escaneo QR y notificar
-            app.escanearModoQr = false;
-            //test y msj
-            app.testConexion();
-            app.conexion ? app.msj = 'Conexion exitosa' : app.msj = 'No se pudo conectar';
-            app.mostrarMsj();
-            return;
+              // Apagar el botón de escaneo QR y notificar
+              app.escanearModoQr = false;
+              //test y msj
+              app.testConexion();
+              app.conexion
+                ? (app.msj = "Conexion exitosa")
+                : (app.msj = "No se pudo conectar");
+              app.mostrarMsj();
+              return;
+            }
+          } catch (e) {
+            console.error("Error al parsear el JSON del QR:", e);
           }
-        } catch (e) {
-          console.error('Error al parsear el JSON del QR:', e);
+        } else {
+          // 2. Si es un escaneo normal de productos (código de barras)
+
+          app.simularEscaneo(codigoLimpio);
         }
-      }
-      else {
-        // 2. Si es un escaneo normal de productos (código de barras)
 
-        app.simularEscaneo(codigoLimpio);
-      }
-
-
-      app.escanearModoQr = false;
-
-    };
-    //Alpine
-    function appLector() {
-      return {
-
-
-        // --- 1. ESTADO Y VARIABLES ---
-        escanearModoQr: false,
-        vistaActual: 'escaner', // 'escaner', 'inventario', 'historial'
-        conexion: false,
-        // Configuración de Red por defecto
-        config: {
-          ip: 'xx',
-          puerto: 'xx',
-          apiKey: 'xx'
-        },
-        /*ipServidor: '192.168.1.40',
+        app.escanearModoQr = false;
+      };
+      //Alpine
+      function appLector() {
+        return {
+          // --- 1. ESTADO Y VARIABLES ---
+          modalRevincular: false,
+          escanearModoQr: false,
+          vistaActual: "escaner", // 'escaner', 'inventario', 'historial'
+          conexion: false,
+          // Configuración de Red por defecto
+          config: {
+            ip: "xx",
+            puerto: "xx",
+            apiKey: "xx",
+          },
+          /*ipServidor: '192.168.1.40',
         puertoServidor: '2000',*/
-        modalBorrarHistorial: false,
-        modalConfig: false,
-        linterna: false,
-        alertaScan: false,
-        mensajes: false,
-        msj: '',
-        buscar_codigo: '0',
-        ultimoCodigo: '',
-        precio_final: 0.00,
-        guardarStock: 0,
-        probandoConexion: false,
-        inventario: {
-          id: null,
-          codigo_barras: '',
-          nombre: '',
-          stockActual: 0,
-          precio_costo_neto: 0.00,
-          porcentaje_ganancia: 50.00,
-          operacion: 'sumar', // 'sumar' o 'restar'
-          cantidad: 0
-        },
+          modalBorrarHistorial: false,
+          modalConfig: false,
+          linterna: false,
+          alertaScan: false,
+          mensajes: false,
+          msj: "",
+          buscar_codigo: "0",
+          ultimoCodigo: "",
+          precio_final: 0.0,
+          guardarStock: 0,
+          probandoConexion: false,
+          inventario: {
+            id: null,
+            codigo_barras: "",
+            nombre: "",
+            stockActual: 0,
+            precio_costo_neto: 0.0,
+            porcentaje_ganancia: 50.0,
+            operacion: "sumar", // 'sumar' o 'restar'
+            cantidad: 0,
+          },
 
-        errores: {},
+          errores: {},
 
-        historial: [
+          historial: [],
 
-        ],
+          // --- 2. CICLO DE VIDA (INIT) ---
+          async init() {
+            this.cargarConfiguracion();
+            this.cargarHistorial();
+            await this.testConexion();
 
-        // --- 2. CICLO DE VIDA (INIT) ---
-        async init() {
-
-          this.cargarConfiguracion();
-          this.cargarHistorial();
-          await this.testConexion();
-
-          this.$nextTick(() => lucide.createIcons());
-
-          // 3. Ocultar el loader suavemente una vez que Alpine completó el montaje
-          this.$nextTick(() => {
-            const loader = document.getElementById('page-loader');
-            if (loader) {
-              loader.classList.add('loader-hidden');
-              // Opcional: eliminar el elemento del DOM tras terminar la animación para liberar memoria
-              setTimeout(() => loader.remove(), 500);
-            }
-          });
-          // 2. Escuchar cambios de vista para volver a renderizar íconos
-          this.$watch('vistaActual', () => {
             this.$nextTick(() => lucide.createIcons());
-          });
-        },
-        activarEscaneoQr() {
-          this.escanearModoQr = !this.escanearModoQr;
 
-          if (this.escanearModoQr && window.AndroidNative && typeof window.AndroidNative.abrirEscanerNativo === 'function') {
-
-            window.AndroidNative.abrirEscanerNativo();
-          }
-          this.linterna = false;
-        },
-
-        toggleLinterna() {
-          this.linterna = !this.linterna;
-
-          if (window.AndroidNative && typeof window.AndroidNative.alternarLinterna === 'function') {
-            window.AndroidNative.alternarLinterna(this.linterna);
-          } else {
-            console.log(`[SIMULACIÓN PC] Linterna: ${this.linterna ? 'ENCENDIDA' : 'APAGADA'}`);
-          }
-        },
-
-        // --- 3. GETTERS ---
-        // Devuelve la dirección completa "192.168.1.40:3000"
-        get urlServidor() {
-          return `${this.config.ip}:${this.config.puerto}`;
-        },
-
-        // --- 4. PERSISTENCIA EN LOCALSTORAGE ---
-        cargarConfiguracion() {
-          const configGuardada = localStorage.getItem('config_servidor');
-          if (configGuardada) {
-            try {
-              const save = JSON.parse(configGuardada);
-              console.log("cargar config");
-              console.log(save);
-              this.config.ip = save.ip ? save.ip : 'ip nada';
-              this.config.puerto = save.ip ? save.puerto : 'puerto nada';
-              this.config.apiKey = save.ip ? save.apiKey : 'apikey nada';
-
-            } catch (e) {
-              console.error('Error al leer localStorage:', e);
-            }
-          }
-        },
-
-        async guardarConfiguracion() {
-
-          localStorage.setItem('config_servidor', JSON.stringify(this.config));
-          this.modalConfig = false;
-          console.log(`Configuracion server: http://${config.ip}:${config.puerto}/`);
-
-
-        },
-
-        // Test rápido de conexión sin procesar códigos
-        async testConexion() {
-          this.probandoConexion = true;
-          try {
-            //  console.log("Iniciando test de conexion...")
-            // 1. AbortController para timeout rápido de 3 segundos (evita congelar la UI si no hay red)
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 3000);
-
-            const respuesta = await fetch(`http://${this.urlServidor}/api/test`, {
-              method: 'GET',
-              signal: controller.signal
+            // 3. Ocultar el loader suavemente una vez que Alpine completó el montaje
+            this.$nextTick(() => {
+              const loader = document.getElementById("page-loader");
+              if (loader) {
+                loader.classList.add("loader-hidden");
+                // Opcional: eliminar el elemento del DOM tras terminar la animación para liberar memoria
+                setTimeout(() => loader.remove(), 500);
+              }
             });
-            //console.log("Repuesta del TEst Coenxion:", respuesta.ok)
-
-            clearTimeout(timeoutId);
-            this.conexion = respuesta.ok;
-          } catch (error) {
-            this.conexion = false;
-            console.warn("falla", error)
-          }
-          finally {
-            this.probandoConexion = false;
-          }
-        },
-
-        // Dispara el escáner (Nativo si está en Android, o Simulado si está en PC)
-        iniciarEscaneo() {
-          if (document.activeElement && typeof document.activeElement.blur === 'function') {
-            document.activeElement.blur();
-          }
-          if (window.AndroidNative && typeof window.AndroidNative.abrirEscanerNativo === 'function') {
-            window.AndroidNative.abrirEscanerNativo();
-
-          } else {
-            // console.log('Ejecutando en navegador PC (Simulación)');
-
-            if (!this.buscar_codigo || this.buscar_codigo.trim() === '' || this.buscar_codigo.trim() === '0') {
-              this.buscar_codigo = '7791234567890';
-            }
-
-            // Ejecuta la simulación con el código por defecto o el introducido manualmente
-            this.simularEscaneo(this.buscar_codigo);
-
-
-
-          }
-          this.linterna = false;
-        },
-
-        // --- GESTIÓN DE HISTORIAL EN LOCALSTORAGE ---
-        cargarHistorial() {
-          const historialGuardado = localStorage.getItem('historial_escaneos');
-          if (historialGuardado) {
-            try {
-              this.historial = JSON.parse(historialGuardado);
-              // console.log("Historial:", this.historial);
-            } catch (e) {
-              console.error('Error al leer historial:', e);
-              this.historial = [];
-            }
-          }
-        },
-
-        guardarHistorialEnStorage() {
-          localStorage.setItem('historial_escaneos', JSON.stringify(this.historial));
-        },
-
-        agregarAHistorial(codigo, tipo) {
-          const ahora = new Date();
-          // Formato Fecha: DD/MM/AAAA | Hora: HH:MM
-          const fechaStr = ahora.toLocaleDateString();
-          const horaStr = ahora.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-
-          const nuevoRegistro = {
-            id: Date.now(), // ID único para borrado
-            codigo: codigo,
-            tipo: tipo,
-            fecha: fechaStr,
-            hora: horaStr
-          };
-
-
-
-          this.historial.unshift(nuevoRegistro);
-          this.guardarHistorialEnStorage();
-        },
-
-        eliminarRegistro(id) {
-          this.historial = this.historial.filter(item => item.id !== id);
-          this.guardarHistorialEnStorage();
-        },
-
-
-        vaciarHistorial() {
-          this.historial = [];
-          localStorage.removeItem('historial_escaneos');
-          this.modalBorrarHistorial = false; // Cierra el modal
-        },
-
-        // --- 4. ACCIONES Y ESCANEO ---
-        async reevaluarOEscanear(codigo) {
-          // Reenvía usando la función de siempre
-          await this.envioCodeScannUsb(codigo);
-        },
-
-        // --- 2. MÉTODOS Y ACCIONES ---
-        async simularEscaneo(codigo) {
-          this.ultimoCodigo = codigo;
-
-          this.mostrarAlert();
-          if (this.vistaActual === 'escaner') {
-
-            await this.envioCodeScannUsb(codigo);
-
-            this.agregarAHistorial(codigo, this.conexion ? 'Escaneo enviado' : 'Escaneo local');
-
-          } else if (this.vistaActual === 'inventario') {
-
-            await this.consultarProductoInventario(codigo);
-          }
-
-
-        },
-
-
-
-
-        //Envio de codigo de barra para q valla a la ruta del teclado scaner usb real
-        async envioCodeScannUsb(codigo) {
-          if (!this.conexion) { this.msj = 'No hay conexion'; this.mostrarMsj(); return; }
-          try {
-            console.log(`http://${this.urlServidor}/api/escanear`)
-            const respuesta = await fetch(`http://${this.urlServidor}/api/escanear`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'x-api-key': this.config.apiKey
-              },
-
-              body: JSON.stringify({
-                codigo: codigo,
-                tipo: this.vistaActual
-              })
+            // 2. Escuchar cambios de vista para volver a renderizar íconos
+            this.$watch("vistaActual", () => {
+              this.$nextTick(() => lucide.createIcons());
             });
-            if (respuesta.ok) {
-              //this.conexion = true;
-              const data = await respuesta.json();
+          },
+          activarEscaneoQr() {
+            this.escanearModoQr = !this.escanearModoQr;
 
+            if (
+              this.escanearModoQr &&
+              window.AndroidNative &&
+              typeof window.AndroidNative.abrirEscanerNativo === "function"
+            ) {
+              window.AndroidNative.abrirEscanerNativo();
             }
-          } catch (error) {
-            //this.conexion = false;
-            console.error('Error al conectar con servidor PC:', error);
-          }
+            this.linterna = false;
+          },
 
-        },
+          toggleLinterna() {
+            this.linterna = !this.linterna;
 
-        // Petición 1: Consultar producto en Node.js
-        async consultarProductoInventario(codigo) {
-          this.inventario.codigo_barras = codigo;
-          //console.log("Entre", codigo)
-
-          try {
-            const respuesta = await fetch(`http://${this.urlServidor}/api/escanear/inventario/`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'x-api-key': this.config.apiKey
-              },
-              body: JSON.stringify({ codigo: codigo })
-            });
-
-            if (respuesta.ok) {
-
-              const producto = await respuesta.json();
-
-              // Cargar datos en el formulario
-              this.inventario.id = producto.id;
-              this.inventario.codigo_barras = producto.codigo_barras;
-              this.inventario.nombre = producto.nombre || 'Producto Desconocido';
-              this.inventario.stockActual = producto.stockActual || 0;
-              this.inventario.precio_costo_neto = producto.precio_costo_neto || 0;
-              this.porcentaje_ganancia = producto.porcentaje_ganancia || 50.00;
-              this.guardarStock = Number(producto.stockActual);
-              this.actualizarDesdeCosto();
-
+            if (
+              window.AndroidNative &&
+              typeof window.AndroidNative.alternarLinterna === "function"
+            ) {
+              window.AndroidNative.alternarLinterna(this.linterna);
             } else {
-
-              this.inventario.id = null;
+              console.log(
+                `[SIMULACIÓN PC] Linterna: ${this.linterna ? "ENCENDIDA" : "APAGADA"}`,
+              );
             }
-          } catch (error) {
-            console.error('Error consultando producto:', error);
-            // this.conexion = false;
-          }
-        },
+          },
 
-        // Petición 2: Guardar/Actualizar inventario en Node.js
-        async guardarInventario() {
-          /* if (!this.inventario.codigo) {
+          // --- 3. GETTERS ---
+          // Devuelve la dirección completa "192.168.1.40:3000"
+          get urlServidor() {
+            return `${this.config.ip}:${this.config.puerto}`;
+          },
+
+          // --- 4. PERSISTENCIA EN LOCALSTORAGE ---
+          cargarConfiguracion() {
+            const configGuardada = localStorage.getItem("config_servidor");
+            if (configGuardada) {
+              try {
+                const save = JSON.parse(configGuardada);
+                console.log("cargar config");
+                console.log(save);
+                this.config.ip = save.ip ? save.ip : "ip nada";
+                this.config.puerto = save.ip ? save.puerto : "puerto nada";
+                this.config.apiKey = save.ip ? save.apiKey : "apikey nada";
+              } catch (e) {
+                console.error("Error al leer localStorage:", e);
+              }
+            }
+          },
+
+          async guardarConfiguracion() {
+            localStorage.setItem(
+              "config_servidor",
+              JSON.stringify(this.config),
+            );
+            this.modalConfig = false;
+            console.log(
+              `Configuracion server: http://${config.ip}:${config.puerto}/`,
+            );
+          },
+
+          // Test rápido de conexión sin procesar códigos
+          async testConexion() {
+            this.probandoConexion = true;
+            try {
+              const controller = new AbortController();
+              const timeoutId = setTimeout(() => controller.abort(), 3000);
+
+              const respuesta = await fetch(
+                `http://${this.urlServidor}/api/test`,
+                {
+                  method: "GET",
+                  headers: {
+                    "x-api-key": this.config.apiKey, // Enviar la API Key que tiene la app
+                  },
+                  signal: controller.signal,
+                },
+              );
+
+              clearTimeout(timeoutId);
+
+              if (respuesta.ok) {
+                const data = await respuesta.json();
+
+                // Caso 1: Todo OK, servidor responde y el dispositivo está vinculado
+                if (data.ok && data.vinculado) {
+                  this.conexion = true;
+                }
+                // Caso 2: El servidor responde pero la API Key ya no existe (borrada o reseteada)
+                else if (data.requiereRevinculacion) {
+                  this.conexion = false;
+                  console.warn(
+                    "Dispositivo desvinculado del servidor. Requiere re-vincular.",
+                  );
+
+                  // Opcional: Limpiar credenciales locales y redirigir a la pantalla de QR
+                  this.limpiarCredencialesYReorganizarUI();
+                } else {
+                  this.conexion = false;
+                }
+              } else {
+                // Errores HTTP como 401, 404, 500, etc.
+                this.conexion = false;
+              }
+            } catch (error) {
+              // Timeout, sin red, IP inalcanzable, etc.
+              this.conexion = false;
+              console.warn("Falla de red o timeout al probar conexión:", error);
+            } finally {
+              this.probandoConexion = false;
+            }
+          },
+
+          // Dispara el escáner (Nativo si está en Android, o Simulado si está en PC)
+          iniciarEscaneo() {
+            if (
+              document.activeElement &&
+              typeof document.activeElement.blur === "function"
+            ) {
+              document.activeElement.blur();
+            }
+            if (
+              window.AndroidNative &&
+              typeof window.AndroidNative.abrirEscanerNativo === "function"
+            ) {
+              window.AndroidNative.abrirEscanerNativo();
+            } else {
+              // console.log('Ejecutando en navegador PC (Simulación)');
+
+              if (
+                !this.buscar_codigo ||
+                this.buscar_codigo.trim() === "" ||
+                this.buscar_codigo.trim() === "0"
+              ) {
+                this.buscar_codigo = "7791234567890";
+              }
+
+              // Ejecuta la simulación con el código por defecto o el introducido manualmente
+              this.simularEscaneo(this.buscar_codigo);
+            }
+            this.linterna = false;
+          },
+
+          // --- GESTIÓN DE HISTORIAL EN LOCALSTORAGE ---
+          cargarHistorial() {
+            const historialGuardado =
+              localStorage.getItem("historial_escaneos");
+            if (historialGuardado) {
+              try {
+                this.historial = JSON.parse(historialGuardado);
+                // console.log("Historial:", this.historial);
+              } catch (e) {
+                console.error("Error al leer historial:", e);
+                this.historial = [];
+              }
+            }
+          },
+
+          guardarHistorialEnStorage() {
+            localStorage.setItem(
+              "historial_escaneos",
+              JSON.stringify(this.historial),
+            );
+          },
+
+          agregarAHistorial(codigo, tipo) {
+            const ahora = new Date();
+            // Formato Fecha: DD/MM/AAAA | Hora: HH:MM
+            const fechaStr = ahora.toLocaleDateString();
+            const horaStr = ahora.toLocaleTimeString([], {
+              hour: "2-digit",
+              minute: "2-digit",
+            });
+
+            const nuevoRegistro = {
+              id: Date.now(), // ID único para borrado
+              codigo: codigo,
+              tipo: tipo,
+              fecha: fechaStr,
+              hora: horaStr,
+            };
+
+            this.historial.unshift(nuevoRegistro);
+            this.guardarHistorialEnStorage();
+          },
+
+          eliminarRegistro(id) {
+            this.historial = this.historial.filter((item) => item.id !== id);
+            this.guardarHistorialEnStorage();
+          },
+
+          vaciarHistorial() {
+            this.historial = [];
+            localStorage.removeItem("historial_escaneos");
+            this.modalBorrarHistorial = false; // Cierra el modal
+          },
+
+          // --- 4. ACCIONES Y ESCANEO ---
+          async reevaluarOEscanear(codigo) {
+            // Reenvía usando la función de siempre
+            await this.envioCodeScannUsb(codigo);
+          },
+
+          // --- 2. MÉTODOS Y ACCIONES ---
+          async simularEscaneo(codigo) {
+            this.ultimoCodigo = codigo;
+
+            this.mostrarAlert();
+            if (this.vistaActual === "escaner") {
+              await this.envioCodeScannUsb(codigo);
+
+              this.agregarAHistorial(
+                codigo,
+                this.conexion ? "Escaneo enviado" : "Escaneo local",
+              );
+            } else if (this.vistaActual === "inventario") {
+              await this.consultarProductoInventario(codigo);
+            }
+          },
+
+          //Envio de codigo de barra para q valla a la ruta del teclado scaner usb real
+          async envioCodeScannUsb(codigo) {
+            if (!this.conexion) {
+              this.msj = "No hay conexion";
+              this.mostrarMsj();
+              return;
+            }
+            try {
+              console.log(`http://${this.urlServidor}/api/escanear`);
+              const respuesta = await fetch(
+                `http://${this.urlServidor}/api/escanear`,
+                {
+                  method: "POST",
+                  headers: {
+                    "Content-Type": "application/json",
+                    "x-api-key": this.config.apiKey,
+                  },
+
+                  body: JSON.stringify({
+                    codigo: codigo,
+                    tipo: this.vistaActual,
+                  }),
+                },
+              );
+              if (respuesta.ok) {
+                //this.conexion = true;
+                const data = await respuesta.json();
+              }
+            } catch (error) {
+              //this.conexion = false;
+              console.error("Error al conectar con servidor PC:", error);
+            }
+          },
+
+          // Petición 1: Consultar producto en Node.js
+          async consultarProductoInventario(codigo) {
+            this.inventario.codigo_barras = codigo;
+            //console.log("Entre", codigo)
+
+            try {
+              const respuesta = await fetch(
+                `http://${this.urlServidor}/api/escanear/inventario/`,
+                {
+                  method: "POST",
+                  headers: {
+                    "Content-Type": "application/json",
+                    "x-api-key": this.config.apiKey,
+                  },
+                  body: JSON.stringify({ codigo: codigo }),
+                },
+              );
+
+              if (respuesta.ok) {
+                const producto = await respuesta.json();
+
+                // Cargar datos en el formulario
+                this.inventario.id = producto.id;
+                this.inventario.codigo_barras = producto.codigo_barras;
+                this.inventario.nombre =
+                  producto.nombre || "Producto Desconocido";
+                this.inventario.stockActual = producto.stockActual || 0;
+                this.inventario.precio_costo_neto =
+                  producto.precio_costo_neto || 0;
+                this.porcentaje_ganancia = producto.porcentaje_ganancia || 50.0;
+                this.guardarStock = Number(producto.stockActual);
+                this.actualizarDesdeCosto();
+              } else {
+                this.inventario.id = null;
+              }
+            } catch (error) {
+              console.error("Error consultando producto:", error);
+              // this.conexion = false;
+            }
+          },
+
+          // Petición 2: Guardar/Actualizar inventario en Node.js
+          async guardarInventario() {
+            /* if (!this.inventario.codigo) {
              alert('Por favor escanea un producto primero.');
              return;
            }
@@ -923,148 +1187,161 @@
              console.error('Error al actualizar inventario:', error);
              this.conexion = false;
            }*/
-        },
+          },
 
+          setTipo(nuevoTipo) {
+            this.inventario.tipo = nuevoTipo;
+            this.inventario.cantidad = nuevoTipo === "kilos" ? 0.5 : 1;
+          },
 
+          guardarInventario() {
+            alert(
+              `[PETICIÓN A NODE.JS]\nGuardado con éxito:\nCódigo: ${this.inventario.codigo}\nAcción: ${this.inventario.operacion.toUpperCase()} ${this.inventario.cantidad} (${this.inventario.tipo})`,
+            );
+            this.historial.unshift({
+              codigo: this.inventario.codigo,
+              tipo: `Inventario (${this.inventario.operacion === "sumar" ? "+" : "-"}${this.inventario.cantidad})`,
+              hora: new Date().toLocaleTimeString().slice(0, 5),
+            });
+            // Limpiar
+            this.inventario.codigo = "";
+            this.inventario.nombre = "";
+          },
 
-        setTipo(nuevoTipo) {
-          this.inventario.tipo = nuevoTipo;
-          this.inventario.cantidad = (nuevoTipo === 'kilos') ? 0.500 : 1;
-        },
+          // Inventario
 
-        guardarInventario() {
-          alert(`[PETICIÓN A NODE.JS]\nGuardado con éxito:\nCódigo: ${this.inventario.codigo}\nAcción: ${this.inventario.operacion.toUpperCase()} ${this.inventario.cantidad} (${this.inventario.tipo})`);
-          this.historial.unshift({
-            codigo: this.inventario.codigo,
-            tipo: `Inventario (${this.inventario.operacion === 'sumar' ? '+' : '-'}${this.inventario.cantidad})`,
-            hora: new Date().toLocaleTimeString().slice(0, 5)
-          });
-          // Limpiar
-          this.inventario.codigo = '';
-          this.inventario.nombre = '';
-        },
+          iniciarEscaneoInventario() {
+            this.vistaActual = "inventario";
+            this.iniciarEscaneo(); // Abre la cámara nativa
+          },
 
+          mostrarAlert(alert = true) {
+            this.alertaScan = alert;
+            setTimeout(() => (this.alertaScan = false), 3000);
+          },
+          mostrarMsj(alert = true) {
+            this.mensajes = alert;
+            setTimeout(() => (this.mensajes = false), 3000);
+          },
+          forzarRecarga() {
+            // 1. Si estás usando la app servida desde la PC (HTTP)
+            // El parámetro `true` fuerza a ignorar el caché del navegador/WebView
+            window.location.reload(true);
 
-        // Inventario
-
-        iniciarEscaneoInventario() {
-          this.vistaActual = 'inventario';
-          this.iniciarEscaneo(); // Abre la cámara nativa
-        },
-
-        mostrarAlert(alert = true) {
-          this.alertaScan = alert;
-          setTimeout(() => this.alertaScan = false, 3000);
-        },
-        mostrarMsj(alert = true) {
-          this.mensajes = alert;
-          setTimeout(() => this.mensajes = false, 3000);
-        },
-        forzarRecarga() {
-          // 1. Si estás usando la app servida desde la PC (HTTP)
-          // El parámetro `true` fuerza a ignorar el caché del navegador/WebView
-          window.location.reload(true);
-
-          // 2. Si estás cargando desde un servidor local Node.js y quieres evitar el caché de CSS/JS:
-          // window.location.href = window.location.pathname + '?v=' + new Date().getTime();
-        },
-        // --- MÉTODOS DE RECALCULO BIDIRECCIONAL ---
-        // --- MÉTODOS DE RECALCULO BIDIRECCIONAL ---
-        actualizarDesdeCosto() {
-          const costo = parseFloat(this.inventario.precio_costo_neto) || 0;
-          const porcentaje = parseFloat(this.inventario.porcentaje_ganancia) || 0;
-
-          const final = costo * (1 + porcentaje / 100);
-          this.precio_final = parseFloat(final.toFixed(2));
-
-          this.validarCampo('precio_costo_neto');
-        },
-
-        actualizarDesdeGanancia() {
-          const costo = parseFloat(this.inventario.precio_costo_neto) || 0;
-          const porcentaje = parseFloat(this.inventario.porcentaje_ganancia) || 0;
-
-          const final = costo * (1 + porcentaje / 100);
-          this.precio_final = parseFloat(final.toFixed(2));
-        },
-
-        actualizarDesdePrecioFinal() {
-          const final = parseFloat(this.precio_final) || 0;
-          const porcentaje = parseFloat(this.inventario.porcentaje_ganancia) || 0;
-
-          if (porcentaje > -100) {
-            const costoCalculado = final / (1 + porcentaje / 100);
-            this.inventario.precio_costo_neto = parseFloat(costoCalculado.toFixed(2));
-          } else {
-            this.inventario.precio_costo_neto = 0;
-          }
-
-          this.validarCampo('precio_costo_neto');
-        },
-        modificarStockVisual() {
-          if (this.inventario.operacion === 'sumar') {
-            this.inventario.stockActual = Number(this.guardarStock) + Number(this.inventario.cantidad);
-          } else if (!Number(this.inventario.stockActual) == 0) {
-            this.inventario.stockActual = Number(this.guardarStock) - Number(this.inventario.cantidad);
-          } else {
-            this.inventario.cantidad = 0;
-            this.inventario.stockActual = Number(this.guardarStock);
-          }
-          if (this.inventario.cantidad === 0) {
-            this.inventario.stockActual = Number(this.guardarStock);
-          }
-
-        },
-
-        obtenerCosto(precio, ganancia) {
-          const p = parseFloat(precio) || 0;
-          const g = parseFloat(ganancia) || 0;
-
-          if (p === 0) return 0;
-          const costoReal = p / (1 + g / 100);
-          return parseFloat(costoReal.toFixed(2));
-        },
-
-        validarCampo(campo) {
-          if (!this.errores) this.errores = {};
-          this.errores[campo] = '';
-
-          if (campo === 'codigo_barras') {
-            if (
-              this.inventario.codigo_barras &&
-              !/^\d+$/.test(this.inventario.codigo_barras)
-            ) {
-              this.errores.codigo_barras = 'El código debe contener solo números';
-            }
-          }
-
-          if (campo === 'nombre') {
-            if (this.inventario.nombre && this.inventario.nombre.length < 3) {
-              this.errores.nombre = 'Nombre demasiado corto';
-            }
-          }
-
-          if (campo === 'categorias_id') {
-            if (!this.inventario.categorias_id) {
-              this.errores.categorias_id = 'Elegí una categoría';
-            }
-          }
-
-          if (campo === 'precio_costo_neto') {
+            // 2. Si estás cargando desde un servidor local Node.js y quieres evitar el caché de CSS/JS:
+            // window.location.href = window.location.pathname + '?v=' + new Date().getTime();
+          },
+          // --- MÉTODOS DE RECALCULO BIDIRECCIONAL ---
+          // --- MÉTODOS DE RECALCULO BIDIRECCIONAL ---
+          actualizarDesdeCosto() {
             const costo = parseFloat(this.inventario.precio_costo_neto) || 0;
-            if (costo <= 0) {
-              this.errores.precio_costo_neto = 'El costo debe ser mayor a 0';
+            const porcentaje =
+              parseFloat(this.inventario.porcentaje_ganancia) || 0;
+
+            const final = costo * (1 + porcentaje / 100);
+            this.precio_final = parseFloat(final.toFixed(2));
+
+            this.validarCampo("precio_costo_neto");
+          },
+
+          actualizarDesdeGanancia() {
+            const costo = parseFloat(this.inventario.precio_costo_neto) || 0;
+            const porcentaje =
+              parseFloat(this.inventario.porcentaje_ganancia) || 0;
+
+            const final = costo * (1 + porcentaje / 100);
+            this.precio_final = parseFloat(final.toFixed(2));
+          },
+
+          actualizarDesdePrecioFinal() {
+            const final = parseFloat(this.precio_final) || 0;
+            const porcentaje =
+              parseFloat(this.inventario.porcentaje_ganancia) || 0;
+
+            if (porcentaje > -100) {
+              const costoCalculado = final / (1 + porcentaje / 100);
+              this.inventario.precio_costo_neto = parseFloat(
+                costoCalculado.toFixed(2),
+              );
+            } else {
+              this.inventario.precio_costo_neto = 0;
             }
-          }
 
-          this.errores = { ...this.errores };
-        }
+            this.validarCampo("precio_costo_neto");
+          },
+          modificarStockVisual() {
+            if (this.inventario.operacion === "sumar") {
+              this.inventario.stockActual =
+                Number(this.guardarStock) + Number(this.inventario.cantidad);
+            } else if (!Number(this.inventario.stockActual) == 0) {
+              this.inventario.stockActual =
+                Number(this.guardarStock) - Number(this.inventario.cantidad);
+            } else {
+              this.inventario.cantidad = 0;
+              this.inventario.stockActual = Number(this.guardarStock);
+            }
+            if (this.inventario.cantidad === 0) {
+              this.inventario.stockActual = Number(this.guardarStock);
+            }
+          },
 
-        //final
+          obtenerCosto(precio, ganancia) {
+            const p = parseFloat(precio) || 0;
+            const g = parseFloat(ganancia) || 0;
 
+            if (p === 0) return 0;
+            const costoReal = p / (1 + g / 100);
+            return parseFloat(costoReal.toFixed(2));
+          },
+
+          validarCampo(campo) {
+            if (!this.errores) this.errores = {};
+            this.errores[campo] = "";
+
+            if (campo === "codigo_barras") {
+              if (
+                this.inventario.codigo_barras &&
+                !/^\d+$/.test(this.inventario.codigo_barras)
+              ) {
+                this.errores.codigo_barras =
+                  "El código debe contener solo números";
+              }
+            }
+
+            if (campo === "nombre") {
+              if (this.inventario.nombre && this.inventario.nombre.length < 3) {
+                this.errores.nombre = "Nombre demasiado corto";
+              }
+            }
+
+            if (campo === "categorias_id") {
+              if (!this.inventario.categorias_id) {
+                this.errores.categorias_id = "Elegí una categoría";
+              }
+            }
+
+            if (campo === "precio_costo_neto") {
+              const costo = parseFloat(this.inventario.precio_costo_neto) || 0;
+              if (costo <= 0) {
+                this.errores.precio_costo_neto = "El costo debe ser mayor a 0";
+              }
+            }
+
+            this.errores = { ...this.errores };
+          },
+          limpiarCredencialesYReorganizarUI() {
+            // Limpiar credenciales locales
+            localStorage.removeItem("config_servidor");
+            this.config.ip = "";
+            this.config.puerto = "";
+            this.config.apiKey = "";
+            this.conexion = false;
+            this.modalRevincular = true;
+          },
+
+          //final
+        };
       }
-    }
-  </script>
-</body>
-
+    </script>
+  </body>
 </html>
